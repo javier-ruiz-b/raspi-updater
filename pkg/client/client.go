@@ -18,4 +18,6 @@ func Main(port int) {
 	log.Print("")
 	log.Print("Address: ", *address)
 	log.Print("TCP port: ", port)
+
+	//disk.Create("a")
 }
