@@ -47,7 +47,9 @@ func setup() {
 			},
 		},
 	}
-	mydisk.Partition(table)
+
+	err = mydisk.Partition(table)
+	check(err)
 }
 
 func teardown() {

@@ -1,4 +1,4 @@
-package log
+package nlog
 
 import (
 	"container/list"
