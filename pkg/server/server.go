@@ -27,30 +27,21 @@ func Main(port int) {
 	log.Print("Port: ", port)
 
 	address := "0.0.0.0:" + strconv.Itoa(int(port))
-	Server(address, "images")
+	server := NewServer(address, "images")
+	err := server.Listen()
+	if err != io.EOF && err != nil {
+		log.Print("Server error: ", err)
+		os.Exit(1)
+	}
 }
 
-func Server(address string, imagesDir string) {
-	listen(address)
+type Server struct {
+	address   string
+	imagesDir string
+	server    *http3.Server
 }
 
-func listen(address string) error {
-	// listener, err := net.Listen("tcp", address)
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
-	// defer listener.Close()
-
-	// nlog.Debug("Listening on ", address)
-	// for {
-	// 	con, err := listener.Accept()
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 		continue
-	// 	}
-
-	// 	go handleClientRequest(con)
-	// }
+func NewServer(address string, imagesDir string) *Server {
 	enableQlog := true
 
 	quicConf := &quic.Config{}
@@ -66,57 +57,24 @@ func listen(address string) error {
 		})
 	}
 
-	handler := newHandler() //www
+	handler := newHandler("bin")
 
-	server := http3.Server{
+	server := &http3.Server{
 		Server:     &http.Server{Handler: handler, Addr: address},
 		QuicConfig: quicConf,
 	}
-	err := server.ListenAndServeTLS(testdata.GetCertificatePaths())
 
-	return err
+	return &Server{
+		address:   address,
+		imagesDir: imagesDir,
+		server:    server,
+	}
 }
 
-// func handleClientRequest(con net.Conn) {
-// 	defer con.Close()
+func (s *Server) Close() {
+	s.server.Close()
+}
 
-// 	enc := gob.NewEncoder(bufio.NewWriter(con))
-// 	dec := gob.NewDecoder(bufio.NewReader(con))
-
-// 	parser := NewClientParser(enc, dec)
-
-// 	for {
-
-// 		var clientHello protocol.Hello
-// 		err := dec.Decode(&clientHello)
-// 		if err != nil {
-// 			nlog.Error("Failed reading hello packet ", clientHello)
-// 			return
-// 		}
-// 		nlog.Debug("Client hello:", clientHello.Id, " version ", clientHello.Version())
-
-// 		// serverHello := protocol.NewHello("server")
-
-// 		// switch err {
-// 		// case nil:
-// 		// 	clientRequest := strings.TrimSpace(clientRequest)
-// 		// 	if clientRequest == ":QUIT" {
-// 		// 		log.Println("client requested server to close the connection so closing")
-// 		// 		return
-// 		// 	} else {
-// 		// 		log.Println(clientRequest)
-// 		// 	}
-// 		// case io.EOF:
-// 		// 	log.Println("client closed the connection by terminating the process")
-// 		// 	return
-// 		// default:
-// 		// 	log.Printf("error: %v\n", err)
-// 		// 	return
-// 		// }
-
-// 		// // Responding to the client request
-// 		// if _, err = con.Write([]byte("GOT IT!\n")); err != nil {
-// 		// 	log.Printf("failed to respond to client: %v\n", err)
-// 		// }
-// 	}
-//}
+func (s *Server) Listen() error {
+	return s.server.ListenAndServeTLS(testdata.GetCertificatePaths())
+}

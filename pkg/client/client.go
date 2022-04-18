@@ -23,13 +23,20 @@ func Main(port int) {
 	log.Print("TCP port: ", port)
 
 	//disk.Create("a")
-	Client(&Config{
+	RunClient(&Config{
 		ServerAddress: *address,
 		Id:            *id,
 		DiskDevice:    *diskDevice,
+		Version:       version.VERSION,
 	})
 }
 
-func Client(config *Config) error {
+func RunClient(config *Config) error {
+	qc := NewQuicClient(config.ServerAddress)
+	err := update(qc, config.Version)
+	if err != nil {
+		return err
+	}
+
 	return errors.New("Not implemented")
 }

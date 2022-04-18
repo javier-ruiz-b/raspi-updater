@@ -1,32 +1,60 @@
 package server
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/network"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/version"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetsVersion(t *testing.T) {
-	tested := newHandler()
+	response := getRequest(t, "/version")
 
-	req, err := http.NewRequest("GET", "/version", nil)
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.Equal(t, version.VERSION, response.Body.String())
+}
+
+func TestGets404OnUnexistingUrl(t *testing.T) {
+	response := getRequest(t, "/unknown_url")
+
+	assert.Equal(t, http.StatusNotFound, response.Code)
+}
+
+func TestDownloadsUpdater(t *testing.T) {
+	file := createTempFile(t)
+	defer os.Remove(file.Name())
+	response := getRequest(t, "/update/updater-amd64")
+
+	assert.Equal(t, http.StatusOK, response.Code)
+	err := network.DownloadFile(file.Name(), response.Result())
+	assert.Nil(t, err)
+
+	fileContents, err := os.ReadFile(file.Name())
+	assert.Nil(t, err)
+	assert.Equal(t, "Test file", string(fileContents))
+}
+
+func createTempFile(t *testing.T) *os.File {
+	file, err := ioutil.TempFile(os.TempDir(), "updater_")
+	assert.Nil(t, err)
+
+	return file
+}
+
+func getRequest(t *testing.T, url string) *httptest.ResponseRecorder {
+	tested := newHandler("../testdata/bin")
+
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rec := httptest.NewRecorder()
-
-	tested.ServeHTTP(rec, req)
-
-	// Check the status code is what we expect.
-	if status := rec.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-
-	assert.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, version.VERSION, rec.Body.String())
+	response := httptest.NewRecorder()
+	tested.ServeHTTP(response, req)
+	return response
 }

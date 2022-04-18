@@ -4,4 +4,5 @@ type Config struct {
 	ServerAddress string
 	Id            string
 	DiskDevice    string
+	Version       string
 }

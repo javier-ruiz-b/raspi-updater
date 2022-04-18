@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/diskfs/go-diskfs v1.2.0
+	github.com/gorilla/mux v1.8.0
 	github.com/lucas-clemente/quic-go v0.27.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
