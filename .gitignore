@@ -1,4 +1,4 @@
-cmd/updater/updater-*
-
+cmd/updater/linux*
+cmd/updater/windows*
 *.exe
 *.qlog

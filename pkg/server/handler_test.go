@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/network"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/version"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ func TestGets404OnUnexistingUrl(t *testing.T) {
 func TestDownloadsUpdater(t *testing.T) {
 	file := createTempFile(t)
 	defer os.Remove(file.Name())
-	response := getRequest(t, "/update/updater-amd64")
+	response := getRequest(t, "/update/windows-amd64")
 
 	assert.Equal(t, http.StatusOK, response.Code)
 	err := network.DownloadFile(file.Name(), response.Result())
@@ -47,7 +48,11 @@ func createTempFile(t *testing.T) *os.File {
 }
 
 func getRequest(t *testing.T, url string) *httptest.ResponseRecorder {
-	tested := newHandler("../testdata/bin")
+
+	options := config.NewServerConfig()
+	binaryDir := "../testdata/bin"
+	options.UpdaterDir = &binaryDir
+	tested := newHandler(options)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

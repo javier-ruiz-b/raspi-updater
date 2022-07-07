@@ -2,50 +2,29 @@ package server
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/testdata"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/utils"
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/version"
 	"github.com/lucas-clemente/quic-go"
 	"github.com/lucas-clemente/quic-go/http3"
 	"github.com/lucas-clemente/quic-go/logging"
 	"github.com/lucas-clemente/quic-go/qlog"
 )
 
-func Main(port int) {
-	fmt.Println("Server", version.VERSION)
-	var ()
-	flag.Parse()
-
-	log.Print("Port: ", port)
-
-	address := "0.0.0.0:" + strconv.Itoa(int(port))
-	server := NewServer(address, "images")
-	err := server.Listen()
-	if err != io.EOF && err != nil {
-		log.Print("Server error: ", err)
-		os.Exit(1)
-	}
-}
-
 type Server struct {
-	address   string
-	imagesDir string
-	server    *http3.Server
+	options *config.ServerConfig
+	server  *http3.Server
 }
 
-func NewServer(address string, imagesDir string) *Server {
-	enableQlog := true
-
+func NewServer(options *config.ServerConfig) *Server {
 	quicConf := &quic.Config{}
-	if enableQlog {
+	if *options.Log {
 		quicConf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {
 			filename := fmt.Sprintf("server_%x.qlog", connID)
 			f, err := os.Create(filename)
@@ -57,17 +36,16 @@ func NewServer(address string, imagesDir string) *Server {
 		})
 	}
 
-	handler := newHandler("bin")
+	handler := newHandler(options)
 
 	server := &http3.Server{
-		Server:     &http.Server{Handler: handler, Addr: address},
+		Server:     &http.Server{Handler: handler, Addr: *options.Address},
 		QuicConfig: quicConf,
 	}
 
 	return &Server{
-		address:   address,
-		imagesDir: imagesDir,
-		server:    server,
+		options: options,
+		server:  server,
 	}
 }
 
@@ -76,5 +54,6 @@ func (s *Server) Close() {
 }
 
 func (s *Server) Listen() error {
+	log.Print("Listening on ", *s.options.Address)
 	return s.server.ListenAndServeTLS(testdata.GetCertificatePaths())
 }

@@ -26,10 +26,9 @@ type QuicClient struct {
 	roundTripper *http3.RoundTripper
 }
 
-func NewQuicClient(address string) *QuicClient {
-	enableQlog := true
+func NewQuicClient(address string, qlogs bool) *QuicClient {
 	var qconf quic.Config
-	if enableQlog {
+	if qlogs {
 		qconf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {
 			filename := fmt.Sprintf("client_%x.qlog", connID)
 			f, err := os.Create(filename)

@@ -2,23 +2,23 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/client"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/version"
 )
 
 func main() {
-	var (
-		_    = flag.Bool("client", false, "Run as client")
-		port = flag.Int("port", 31416, "Updater TCP port")
-	)
+	fmt.Println("Updater version ", version.VERSION)
+	flag.Bool("client", false, "Run as client")
 
 	if strings.HasPrefix(os.Args[0], "client") || containsClient(os.Args[1:]) {
-		client.Main(*port)
+		client.Main()
 	} else {
-		server.Main(*port)
+		server.Main()
 	}
 }
 

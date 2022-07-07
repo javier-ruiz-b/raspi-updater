@@ -115,7 +115,7 @@ func EditDisk(diskDevice string, newTable *PartitionTable) error {
 // 	if !ok {
 // 		// check(fmt.Errorf("not an iso9660 filesystem"))
 // 	}
-// 	err = iso.Finalize(iso9660.FinalizeOptions{})
+// 	err = iso.Finalize(iso9660.FinalizeConfig{})
 // 	check(err)
 // }
 
