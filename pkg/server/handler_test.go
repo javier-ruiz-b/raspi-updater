@@ -37,7 +37,7 @@ func TestDownloadsUpdater(t *testing.T) {
 
 	fileContents, err := os.ReadFile(file.Name())
 	assert.Nil(t, err)
-	assert.Equal(t, "Test file", string(fileContents))
+	assert.Contains(t, string(fileContents), "Test file")
 }
 
 func createTempFile(t *testing.T) *os.File {

@@ -12,6 +12,7 @@ import (
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/client"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/updater"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,9 +50,21 @@ func TestUpdateClientBinary(t *testing.T) {
 	options := newClientConfig()
 	differentVersion := "0.0.0"
 	options.Version = &differentVersion
+	runner := updater.NewFakeRunner()
 
-	err := client.RunClient(options)
+	err := client.RunClient(options, runner)
 
+	assert.True(t, runner.IsRun())
+	assert.Nil(t, err)
+}
+
+func TestSmoke(t *testing.T) {
+	options := newClientConfig()
+	runner := updater.NewFakeRunner()
+
+	err := client.RunClient(options, runner)
+
+	assert.False(t, runner.IsRun())
 	assert.EqualError(t, err, "")
 }
 
