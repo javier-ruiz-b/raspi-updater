@@ -1,11 +1,16 @@
 package config
 
-import "flag"
+import (
+	"flag"
+
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/runner"
+)
 
 type ClientConfig struct {
 	*Config
 	Id         *string
 	DiskDevice *string
+	Runner     runner.Runner
 }
 
 func NewClientConfig() *ClientConfig {
@@ -16,6 +21,7 @@ func NewClientConfig() *ClientConfig {
 		Config:     NewConfig(),
 		Id:         &defaultId,
 		DiskDevice: &defaultDisk,
+		Runner:     &runner.OsRunner{},
 	}
 
 	return result

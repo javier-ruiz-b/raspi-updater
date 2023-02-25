@@ -1,4 +1,4 @@
-package selfupdater
+package runner
 
 import "os"
 

@@ -10,7 +10,7 @@ import (
 	"github.com/diskfs/go-diskfs/partition/mbr"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/client"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/selfupdater"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/runner"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
 	"github.com/stretchr/testify/assert"
 )
@@ -46,11 +46,11 @@ func teardown() {
 
 func TestUpdateClientBinary(t *testing.T) {
 	options := newClientConfig()
+	runner := options.Runner.(*runner.FakeRunner)
 	differentVersion := "0.0.0"
 	options.Version = &differentVersion
-	runner := selfupdater.NewFakeRunner()
 
-	err := client.RunClient(options, runner)
+	err := client.RunClient(options)
 
 	assert.True(t, runner.IsRun())
 	assert.Nil(t, err)
@@ -58,9 +58,9 @@ func TestUpdateClientBinary(t *testing.T) {
 
 func TestSmoke(t *testing.T) {
 	options := newClientConfig()
-	runner := selfupdater.NewFakeRunner()
+	runner := options.Runner.(*runner.FakeRunner)
 
-	err := client.RunClient(options, runner)
+	err := client.RunClient(options)
 
 	assert.False(t, runner.IsRun())
 	assert.EqualError(t, err, "not implemented")
@@ -94,6 +94,7 @@ func newClientConfig() *config.ClientConfig {
 	id := "acceptance"
 	result.Id = &id
 	result.DiskDevice = &clientImage
+	result.Runner = runner.NewFakeRunner()
 
 	return result
 }
