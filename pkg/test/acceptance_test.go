@@ -1,7 +1,6 @@
 package test
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
@@ -11,8 +10,8 @@ import (
 	"github.com/diskfs/go-diskfs/partition/mbr"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/client"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/selfupdater"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/updater"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,7 +27,7 @@ func setup() {
 	runtime.Gosched()
 
 	var err error
-	tempDir, err = ioutil.TempDir(os.TempDir(), "acceptance")
+	tempDir, err = os.MkdirTemp(os.TempDir(), "acceptance")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -38,7 +37,6 @@ func setup() {
 	if err != nil {
 		log.Panic(err)
 	}
-
 }
 
 func teardown() {
@@ -50,7 +48,7 @@ func TestUpdateClientBinary(t *testing.T) {
 	options := newClientConfig()
 	differentVersion := "0.0.0"
 	options.Version = &differentVersion
-	runner := updater.NewFakeRunner()
+	runner := selfupdater.NewFakeRunner()
 
 	err := client.RunClient(options, runner)
 
@@ -60,12 +58,12 @@ func TestUpdateClientBinary(t *testing.T) {
 
 func TestSmoke(t *testing.T) {
 	options := newClientConfig()
-	runner := updater.NewFakeRunner()
+	runner := selfupdater.NewFakeRunner()
 
 	err := client.RunClient(options, runner)
 
 	assert.False(t, runner.IsRun())
-	assert.EqualError(t, err, "")
+	assert.EqualError(t, err, "not implemented")
 }
 
 func createEmptyImage(imageFile string, size int64) error {

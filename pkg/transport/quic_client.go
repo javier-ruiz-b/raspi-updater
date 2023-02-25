@@ -26,7 +26,11 @@ type QuicClient struct {
 	roundTripper *http3.RoundTripper
 }
 
-func NewQuicClient(address string, qlogs bool) *QuicClient {
+func NewQuicClient(address string, qlogs bool) Client {
+	return newClient(newQuicClient(address, qlogs))
+}
+
+func newQuicClient(address string, qlogs bool) transportClient {
 	var qconf quic.Config
 	if qlogs {
 		qconf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {

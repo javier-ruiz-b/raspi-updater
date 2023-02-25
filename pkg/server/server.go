@@ -41,12 +41,6 @@ func NewServer(options *config.ServerConfig) *Server {
 		QuicConfig: quicConf,
 	}
 
-	// server := &http3.Server{
-	// 	Server:     &http.Server{Handler: handler, Addr: *options.Address},
-	// 	QuicConfig: quicConf,
-	// }
-	// http3.ListenAndServe()
-
 	return &Server{
 		options: options,
 		server:  server,

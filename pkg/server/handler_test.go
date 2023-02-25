@@ -1,13 +1,13 @@
 package server
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/network"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/version"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,9 +29,9 @@ func TestDownloadsUpdater(t *testing.T) {
 	file := createTempFile(t)
 	defer os.Remove(file.Name())
 	response := getRequest(t, "/update/windows-amd64")
-
 	assert.Equal(t, http.StatusOK, response.Code)
-	err := network.DownloadFile(file.Name(), response.Result())
+
+	_, err := io.Copy(file, response.Body)
 	assert.Nil(t, err)
 
 	fileContents, err := os.ReadFile(file.Name())
@@ -47,7 +47,6 @@ func createTempFile(t *testing.T) *os.File {
 }
 
 func getRequest(t *testing.T, url string) *httptest.ResponseRecorder {
-
 	options := config.NewServerConfig()
 	binaryDir := "../testdata/bin"
 	options.UpdaterDir = &binaryDir

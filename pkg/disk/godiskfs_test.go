@@ -1,7 +1,6 @@
 package disk
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -15,7 +14,7 @@ var tempDir string
 var imageFile string
 
 func setup() {
-	tempDir, err := ioutil.TempDir(os.TempDir(), "raspberrydisk")
+	tempDir, err := os.MkdirTemp(os.TempDir(), "raspberrydisk")
 	check(err)
 
 	imageFile = tempDir + "/disk.img"
