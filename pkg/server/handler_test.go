@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -41,7 +40,7 @@ func TestDownloadsUpdater(t *testing.T) {
 }
 
 func createTempFile(t *testing.T) *os.File {
-	file, err := ioutil.TempFile(os.TempDir(), "updater_")
+	file, err := os.CreateTemp(os.TempDir(), "updater_")
 	assert.Nil(t, err)
 
 	return file

@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/testdata"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/utils"
-	"github.com/lucas-clemente/quic-go"
-	"github.com/lucas-clemente/quic-go/http3"
-	"github.com/lucas-clemente/quic-go/logging"
-	"github.com/lucas-clemente/quic-go/qlog"
+	"github.com/quic-go/quic-go"
+	"github.com/quic-go/quic-go/http3"
+	"github.com/quic-go/quic-go/logging"
+	"github.com/quic-go/quic-go/qlog"
 )
 
 type Server struct {
@@ -36,12 +35,17 @@ func NewServer(options *config.ServerConfig) *Server {
 		})
 	}
 
-	handler := newHandler(options)
-
 	server := &http3.Server{
-		Server:     &http.Server{Handler: handler, Addr: *options.Address},
+		Handler:    newHandler(options),
+		Addr:       *options.Address,
 		QuicConfig: quicConf,
 	}
+
+	// server := &http3.Server{
+	// 	Server:     &http.Server{Handler: handler, Addr: *options.Address},
+	// 	QuicConfig: quicConf,
+	// }
+	// http3.ListenAndServe()
 
 	return &Server{
 		options: options,
