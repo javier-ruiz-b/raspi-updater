@@ -39,7 +39,7 @@ func (u *SelfUpdater) IsUpdateAvailable(clientVersion string) (bool, error) {
 	return serverVersion != clientVersion, nil
 }
 
-func (u *SelfUpdater) downloadBinary() (*os.File, error) {
+func (u *SelfUpdater) downloadBinary(progress progress.Progress) (*os.File, error) {
 	tempFile, err := os.CreateTemp(os.TempDir(), "updater")
 	if err != nil {
 		return nil, err
@@ -50,6 +50,7 @@ func (u *SelfUpdater) downloadBinary() (*os.File, error) {
 	goarch := runtime.GOARCH
 	url := "/update/" + goos + "-" + goarch
 
-	err = u.client.DownloadFile(tempFile.Name(), url)
+	progress.SetDescription("Downloading update", 0)
+	err = u.client.DownloadFile(tempFile.Name(), url, progress)
 	return tempFile, err
 }

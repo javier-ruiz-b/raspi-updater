@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func MergeTables(desired *PartitionTable, existing *PartitionTable) (*PartitionTable, error) {
+func mergePartitionTables(desired *PartitionTable, existing *PartitionTable) (*PartitionTable, error) {
 	if len(desired.Partitions) == 0 {
 		return nil, errors.New("the desired partition table is empty")
 	}

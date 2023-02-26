@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/progress"
 )
 
 type Client interface {
@@ -13,7 +15,7 @@ type Client interface {
 	Get(url string) (*http.Response, error)
 	GetBytes(url string) ([]byte, error)
 	GetString(url string) (string, error)
-	DownloadFile(filepath string, url string) error
+	DownloadFile(filepath string, url string, pr progress.Progress) error
 }
 
 type ClientStruct struct {
@@ -49,7 +51,7 @@ func (c *ClientStruct) GetString(url string) (string, error) {
 	return string(bytes), err
 }
 
-func (c *ClientStruct) DownloadFile(filepath string, url string) error {
+func (c *ClientStruct) DownloadFile(filepath string, url string, pr progress.Progress) error {
 	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
@@ -66,6 +68,7 @@ func (c *ClientStruct) DownloadFile(filepath string, url string) error {
 		return fmt.Errorf("error getting file %s, unexpected status code: %d", url, response.StatusCode)
 	}
 
-	_, err = io.Copy(out, response.Body)
+	counter := progress.NewIoCounter(response.ContentLength, pr)
+	_, err = io.Copy(out, io.TeeReader(response.Body, counter))
 	return err
 }

@@ -34,7 +34,7 @@ func TestCreatesExt4PartitionIfDoesNotExist(t *testing.T) {
 		},
 	}
 
-	result, err := MergeTables(&desiredTable, &existingTable)
+	result, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.Nil(t, err)
 
@@ -65,7 +65,7 @@ func TestFailsIfBootPartitionIsMissingOnDesiredTable(t *testing.T) {
 		},
 	}
 
-	_, err := MergeTables(&desiredTable, &existingTable)
+	_, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.NotNil(t, err)
 }
@@ -86,7 +86,7 @@ func TestFailsIfDesiredPartitionTableIsEmpty(t *testing.T) {
 		},
 	}
 
-	_, err := MergeTables(&desiredTable, &existingTable)
+	_, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.NotNil(t, err)
 }
@@ -99,7 +99,7 @@ func TestFailsIfDifferentSectorSize(t *testing.T) {
 		SectorSize: 512,
 	}
 
-	_, err := MergeTables(&desiredTable, &existingTable)
+	_, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.NotNil(t, err)
 }
@@ -120,7 +120,7 @@ func TestCreatesBootPartitionIfMissing(t *testing.T) {
 		Partitions: []Partition{},
 	}
 
-	result, err := MergeTables(&desiredTable, &existingTable)
+	result, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.Nil(t, err)
 	assert.Equal(t, &desiredTable, result)
@@ -148,7 +148,7 @@ func TestDoesNotModifyBootPartitionIfDiffersFromDesiredPartitionTable(t *testing
 		},
 	}
 
-	result, err := MergeTables(&desiredTable, &existingTable)
+	result, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.Nil(t, err)
 	assert.Equal(t, &existingTable, result)
@@ -181,7 +181,7 @@ func TestDoesNotOverlapOnExistingPartition(t *testing.T) {
 		},
 	}
 
-	result, err := MergeTables(&desiredTable, &existingTable)
+	result, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.Nil(t, err)
 	assert.Equal(t, &PartitionTable{
@@ -228,7 +228,7 @@ func TestFailsIfItPartitionsDoNotFit(t *testing.T) {
 		},
 	}
 
-	_, err := MergeTables(&desiredTable, &existingTable)
+	_, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.NotNil(t, err)
 }
@@ -243,7 +243,7 @@ func TestFailsIfDesiredDiskSizeDoesNotFit(t *testing.T) {
 		Partitions: []Partition{},
 	}
 
-	_, err := MergeTables(&desiredTable, &existingTable)
+	_, err := mergePartitionTables(&desiredTable, &existingTable)
 
 	assert.NotNil(t, err)
 }
