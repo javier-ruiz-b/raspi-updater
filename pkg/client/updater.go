@@ -1,25 +1,26 @@
 package client
 
 import (
-	"errors"
 	"fmt"
+	"log"
+	"os"
+	"strings"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/disk"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/progress"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/selfupdater"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/transport"
 )
 
 type Updater struct {
 	conf *config.ClientConfig
-	disk *disk.Disk
 }
 
 func NewUpdater(conf *config.ClientConfig) *Updater {
 	return &Updater{
 		conf: conf,
-		disk: disk.NewDisk(*conf.DiskDevice),
 	}
 }
 
@@ -40,20 +41,51 @@ func (u *Updater) Run() error {
 	}
 
 	pr.SetDescription("Reading local disk", 1)
-	err = u.disk.Read()
+	_, err = os.Stat(*u.conf.DiskDevice)
 	if err != nil {
 		return err
 	}
-	u.disk.GetPartitionTable().Print()
+	disk := disk.NewDisk(*u.conf.DiskDevice)
+	err = disk.Read()
+	if err != nil {
+		return err
+	}
+
+	disk.GetPartitionTable().Print()
+	fmt.Printf("\n\n")
 
 	pr.SetDescription("Reading local version", 2)
+	localVersion, err := disk.ReadVersion()
+	if err != nil {
+		log.Printf("warning: could not read local version: %v", err)
+	}
 
-	pr.SetDescription("Checking for image update", 2)
-	imageUrl := fmt.Sprintf("/images/%s", *u.conf.Id)
-	_, err = qc.GetString(imageUrl + "/version")
+	pr.SetDescription("Checking for image update for "+*u.conf.Id, 3)
+	imageUrlVersion := strings.Replace(server.API_IMAGES_VERSION, "{image}", *u.conf.Id, 1)
+	serverVersion, err := qc.GetString(imageUrlVersion)
 	if err != nil {
 		return err
 	}
 
-	return errors.New("not implemented")
+	if localVersion == serverVersion {
+		log.Printf("\nUp to date!")
+		return nil
+	}
+
+	log.Printf("\nUpdate Available. Server version: %s, Client version:%s\n", serverVersion, localVersion)
+	err = u.update(qc, disk, pr)
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("\nUpdate success!")
+	return nil
+}
+
+func (u *Updater) update(qc transport.Client, disk *disk.Disk, pr progress.Progress) error {
+	pr.SetDescription("Getting partition scheme", 5)
+
+	// qc.GetBytes()
+	return nil
 }

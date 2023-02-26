@@ -3,9 +3,11 @@ package selfupdater
 import (
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/progress"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/runner"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/transport"
 )
 
@@ -31,7 +33,7 @@ func (u *SelfUpdater) DownloadAndRunUpdate(progress progress.Progress) error {
 }
 
 func (u *SelfUpdater) IsUpdateAvailable(clientVersion string) (bool, error) {
-	serverVersion, err := u.client.GetString("/version")
+	serverVersion, err := u.client.GetString(server.API_VERSION)
 	if err != nil {
 		return false, err
 	}
@@ -46,11 +48,10 @@ func (u *SelfUpdater) downloadBinary(progress progress.Progress) (*os.File, erro
 	}
 	tempFile.Close()
 
-	goos := runtime.GOOS
-	goarch := runtime.GOARCH
-	url := "/update/" + goos + "-" + goarch
+	filename := runtime.GOOS + "-" + runtime.GOARCH
+	url := strings.Replace(server.API_UPDATE, "{filename}", filename, 1)
 
-	progress.SetDescription("Downloading update", 0)
+	progress.SetPercent(0)
 	err = u.client.DownloadFile(tempFile.Name(), url, progress)
 	return tempFile, err
 }

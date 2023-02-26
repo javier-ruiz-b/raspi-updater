@@ -38,6 +38,9 @@ func (c *ClientStruct) GetBytes(url string) ([]byte, error) {
 	body := &bytes.Buffer{}
 
 	response, err := c.tc.Get(url)
+	if response.StatusCode != http.StatusOK {
+		return body.Bytes(), fmt.Errorf("error getting  %s, unexpected status code: %d", url, response.StatusCode)
+	}
 	if err != nil {
 		return body.Bytes(), err
 	}

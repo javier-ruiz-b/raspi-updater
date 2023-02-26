@@ -19,10 +19,19 @@ var address string
 var tempDir string
 var clientImage string
 var serv *server.Server
+var clientConfig *config.ClientConfig
+var imagesDir string = "../testdata"
 
 func setup() {
+	// _, filename, _, ok := runtime.Caller(0)
+	// if !ok {
+	// 	panic("Failed to get current frame")
+	// }
+
 	address = "localhost:25469"
-	serv = server.NewServer(newServerConfig())
+	serverConfig := newServerConfig()
+	serverConfig.ImagesDir = &imagesDir
+	serv = server.NewServer(serverConfig)
 	go serv.Listen()
 	runtime.Gosched()
 
@@ -37,6 +46,9 @@ func setup() {
 	if err != nil {
 		log.Panic(err)
 	}
+
+	clientConfig = newClientConfig()
+	clientConfig.DiskDevice = &clientImage
 }
 
 func teardown() {
@@ -45,22 +57,20 @@ func teardown() {
 }
 
 func TestUpdateClientBinary(t *testing.T) {
-	options := newClientConfig()
-	runner := options.Runner.(*runner.FakeRunner)
+	runner := clientConfig.Runner.(*runner.FakeRunner)
 	differentVersion := "0.0.0"
-	options.Version = &differentVersion
+	clientConfig.Version = &differentVersion
 
-	err := client.RunClient(options)
+	err := client.RunClient(clientConfig)
 
 	assert.True(t, runner.IsRun())
 	assert.Nil(t, err)
 }
 
 func TestSmoke(t *testing.T) {
-	options := newClientConfig()
-	runner := options.Runner.(*runner.FakeRunner)
+	runner := clientConfig.Runner.(*runner.FakeRunner)
 
-	err := client.RunClient(options)
+	err := client.RunClient(clientConfig)
 
 	assert.False(t, runner.IsRun())
 	assert.EqualError(t, err, "not implemented")
