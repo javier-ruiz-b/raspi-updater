@@ -3,6 +3,7 @@ package test
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -27,6 +28,11 @@ func setup() {
 	// if !ok {
 	// 	panic("Failed to get current frame")
 	// }
+	if runtime.GOOS == "windows" {
+		path := os.Getenv("PATH")
+		tools_win_dir, _ := filepath.Abs("../../tools_win")
+		os.Setenv("PATH", path+";"+tools_win_dir)
+	}
 
 	address = "localhost:25469"
 	serverConfig := newServerConfig()

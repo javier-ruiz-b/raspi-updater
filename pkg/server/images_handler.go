@@ -1,24 +1,22 @@
 package server
 
 import (
-	"fmt"
-	"io/fs"
+	"bytes"
+	"encoding/gob"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/images"
 )
 
 type ImagesHandler struct {
-	conf *config.ServerConfig
+	imageDir *images.ImageDir
 }
 
 func (i *ImagesHandler) imageVersionHandler(w http.ResponseWriter, r *http.Request) {
-	image, err := i.findImage(mux.Vars(r)["image"])
+	imageName := mux.Vars(r)["image"]
+	image, err := i.imageDir.FindImage(imageName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(err.Error()))
@@ -38,38 +36,32 @@ func (i *ImagesHandler) imageVersionHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (i *ImagesHandler) imagePartitionTableHandler(w http.ResponseWriter, r *http.Request) {
-	image, err := i.findImage(mux.Vars(r)["image"])
+	imageName := mux.Vars(r)["image"]
+	image, err := i.imageDir.FindImage(imageName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	//TODO: handle compressed images
-	file, err := os.Open(image.Name())
-	//TODO: copy 512bytes to temp file and open with disk.NewDisk()
+	disk, err := image.ReadDisk()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
 	}
+
+	var buffer bytes.Buffer
+	err = gob.NewEncoder(&buffer).Encode(disk)
+	if err != nil {
+		//TODO: disk has no exported fields.
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(buffer.Bytes())
 }
 
 //----
-
-func (i *ImagesHandler) findImage(imageName string) (fs.FileInfo, error) {
-	matches, err := filepath.Glob(*i.conf.ImagesDir + "/" + imageName + "*.img*")
-	if err != nil {
-		return nil, err
-	}
-
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("No matching image found for %s", imageName)
-	}
-
-	if len(matches) != 1 {
-		return nil, fmt.Errorf(fmt.Sprintf("There are %d images matching %s", len(matches), strings.Join(matches, " ")))
-	}
-
-	return os.Stat(matches[0])
-}

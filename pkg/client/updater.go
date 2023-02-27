@@ -1,6 +1,8 @@
 package client
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"log"
 	"os"
@@ -83,9 +85,18 @@ func (u *Updater) Run() error {
 	return nil
 }
 
-func (u *Updater) update(qc transport.Client, disk *disk.Disk, pr progress.Progress) error {
+func (u *Updater) update(qc transport.Client, myDisk *disk.Disk, pr progress.Progress) error {
 	pr.SetDescription("Getting partition scheme", 5)
+	imageUrlVersion := strings.Replace(server.API_IMAGES_PARTITION_TABLE, "{image}", *u.conf.Id, 1)
+	partitionTableBytes, err := qc.GetBytes(imageUrlVersion)
+	if err != nil {
+		return err
+	}
 
-	// qc.GetBytes()
-	return nil
+	dec := gob.NewDecoder(bytes.NewBuffer(partitionTableBytes))
+	var remoteDisk disk.Disk
+	err = dec.Decode(&remoteDisk)
+	remoteDisk.GetPartitionTable().Print()
+
+	return err
 }

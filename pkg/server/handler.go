@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/images"
 )
 
 const API_IMAGES_VERSION string = "/images/{image}/version"
@@ -22,7 +23,7 @@ func newHandler(options *config.ServerConfig) http.Handler {
 		binariesDir: *options.UpdaterDir,
 	}
 	ih := &ImagesHandler{
-		conf: options,
+		imageDir: images.NewImageDir(*options.ImagesDir),
 	}
 
 	serveMux.HandleFunc(API_VERSION, versionHandler)
