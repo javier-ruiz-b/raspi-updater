@@ -8,9 +8,10 @@ import (
 
 type ClientConfig struct {
 	*Config
-	Id         *string
-	DiskDevice *string
-	Runner     runner.Runner
+	Id              *string
+	DiskDevice      *string
+	CompressionTool *string
+	Runner          runner.Runner
 }
 
 func NewClientConfig() *ClientConfig {
@@ -32,6 +33,7 @@ func (c *ClientConfig) LoadFlags() {
 
 	c.Id = flag.String("id", *c.Id, "Client ID (e.g. rpi_john_garage)")
 	c.DiskDevice = flag.String("disk", *c.DiskDevice, "Disk device")
+	c.CompressionTool = flag.String("compression", *c.CompressionTool, "Compression format for transfers (xz, lz4, gzip, etc..)")
 
 	flag.Parse()
 }

@@ -11,7 +11,7 @@ type Partition struct {
 	Type   PartitionType
 	Start  uint32 // in megabyte
 	Size   uint32 // in megabyte
-	index  int
+	Index  int
 	parent *Disk
 }
 
@@ -38,7 +38,7 @@ func (p *Partition) ReadDir(path string) ([]fs.FileInfo, error) {
 		return nil, err
 	}
 
-	fs, err := disk.GetFilesystem(p.index + 1)
+	fs, err := disk.GetFilesystem(p.Index + 1)
 	if err != nil {
 		return nil, err
 	}
@@ -52,10 +52,20 @@ func (p *Partition) OpenFile(path string, flag int) (io.ReadWriteCloser, error) 
 		return nil, err
 	}
 
-	fs, err := disk.GetFilesystem(p.index + 1)
+	fs, err := disk.GetFilesystem(p.Index + 1)
 	if err != nil {
 		return nil, err
 	}
 
 	return fs.OpenFile(path, flag)
 }
+
+// func (p *Partition) OpenStream( io.ReadCloser ) (io.ReadWriteCloser, error) {
+// 	file, err := os.OpenFile(diskdevice, os.O_RDONLY, 0)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	_, err = file.Seek(int64(p.parent.partitionTable.SectorSize)*int64(p.Start), 0)
+// 	return file, err
+// }

@@ -3,17 +3,23 @@ package runner
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 )
 
 type OsRunner struct{}
 
-func (*OsRunner) Run(file *os.File) error {
-	file.Chmod(0777)
+func (o *OsRunner) RunPath(filePath string, args ...string) error {
+	cmd := exec.Command(filePath, args...)
+	err := cmd.Run()
+	if err != nil {
+		errExit := err.(*exec.ExitError)
+		return fmt.Errorf("process %s ended with exit code %d. Output: %s", filePath, errExit.ExitCode(), errExit.Stderr)
+	}
+	return err
+}
 
-	var procAttr os.ProcAttr
-	procAttr.Files = []*os.File{os.Stdin, os.Stdout, os.Stderr}
-
+func (o *OsRunner) Run(file *os.File, args ...string) error {
 	path := file.Name()
 	if runtime.GOOS == "windows" {
 		err := os.Rename(path, path+".exe")
@@ -24,15 +30,5 @@ func (*OsRunner) Run(file *os.File) error {
 	}
 	defer os.Remove(path)
 
-	process, err := os.StartProcess(path, os.Args, &procAttr)
-	if err != nil {
-		return err
-	}
-
-	state, err := process.Wait()
-	if state.ExitCode() != 0 {
-		return fmt.Errorf("process %s ended with exit code %d", file.Name(), state.ExitCode())
-	}
-
-	return err
+	return o.RunPath(path)
 }

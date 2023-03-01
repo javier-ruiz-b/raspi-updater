@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/nlog"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/testdata"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/utils"
 	"github.com/quic-go/quic-go"
@@ -78,6 +77,6 @@ func (c *QuicClient) Close() {
 
 func (c *QuicClient) Get(url string) (*http.Response, error) {
 	url = c.address + url
-	nlog.Debug("Get ", url)
+	// nlog.Debug("Get ", url)
 	return c.client.Get(url)
 }

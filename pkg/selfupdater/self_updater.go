@@ -53,5 +53,6 @@ func (u *SelfUpdater) downloadBinary(progress progress.Progress) (*os.File, erro
 
 	progress.SetPercent(0)
 	err = u.client.DownloadFile(tempFile.Name(), url, progress)
+	tempFile.Chmod(0777)
 	return tempFile, err
 }

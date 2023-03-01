@@ -5,4 +5,5 @@ type Progress interface {
 	SetDescription(string, int)
 	Percent() int
 	Description() string
+	Printf(format string, a ...any)
 }

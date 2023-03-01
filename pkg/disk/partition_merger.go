@@ -20,16 +20,15 @@ func mergePartitionTables(desired *PartitionTable, existing *PartitionTable) (*P
 			desired.Size, existing.Size)
 	}
 
-	desiredBoot := desired.Partitions[0]
-	if !isFatPartition(&desiredBoot) {
-		return nil, fmt.Errorf("first partition (/boot) of the desired partition table is supposed to be a FAT filesystem. Found %b on %d with size %d",
-			desiredBoot.Type, desiredBoot.Start, desiredBoot.Size)
+	desiredBoot, err := desired.GetBootPartition()
+	if err != nil {
+		return nil, err
 	}
 
 	partitions := []Partition{}
 
 	if len(existing.Partitions) == 0 || !isFatPartition(&existing.Partitions[0]) {
-		partitions = append(partitions, desiredBoot)
+		partitions = append(partitions, *desiredBoot)
 	} else {
 		partitions = append(partitions, existing.Partitions[0])
 	}

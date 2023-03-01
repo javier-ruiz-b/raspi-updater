@@ -57,7 +57,7 @@ func (d *Disk) Read() error {
 			Type:   PartitionType(mbrPart.Type),
 			Start:  mbrPart.Start,
 			Size:   mbrPart.Size,
-			index:  i,
+			Index:  i,
 			parent: d,
 		})
 	}

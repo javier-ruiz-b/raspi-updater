@@ -1,11 +1,8 @@
 package client
 
 import (
-	"bytes"
-	"encoding/gob"
-	"fmt"
-	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
@@ -29,7 +26,7 @@ func NewUpdater(conf *config.ClientConfig) *Updater {
 func (u *Updater) Run() error {
 	qc := transport.NewQuicClient(*u.conf.Address, *u.conf.Log)
 	selfupdater := selfupdater.NewSelfUpdater(qc, u.conf.Runner)
-	pr := progress.NewProgressReporter()
+	pr := progress.NewMainProgressReporter()
 
 	pr.SetDescription("Checking for client update", 0)
 	updateAvailable, err := selfupdater.IsUpdateAvailable(*u.conf.Version)
@@ -39,7 +36,7 @@ func (u *Updater) Run() error {
 
 	if updateAvailable {
 		pr.SetDescription("Update found", 25)
-		return selfupdater.DownloadAndRunUpdate(progress.NewSubProgressReporter(pr, 100))
+		return selfupdater.DownloadAndRunUpdate(progress.NewProgressReporter(pr, 100))
 	}
 
 	pr.SetDescription("Reading local disk", 1)
@@ -53,50 +50,82 @@ func (u *Updater) Run() error {
 		return err
 	}
 
-	disk.GetPartitionTable().Print()
-	fmt.Printf("\n\n")
-
 	pr.SetDescription("Reading local version", 2)
 	localVersion, err := disk.ReadVersion()
 	if err != nil {
-		log.Printf("warning: could not read local version: %v", err)
+		pr.Printf("Warning: could not read local version: %v", err)
 	}
 
 	pr.SetDescription("Checking for image update for "+*u.conf.Id, 3)
-	imageUrlVersion := strings.Replace(server.API_IMAGES_VERSION, "{image}", *u.conf.Id, 1)
+	imageUrlVersion := strings.Replace(server.API_IMAGES_VERSION, "{id}", *u.conf.Id, 1)
 	serverVersion, err := qc.GetString(imageUrlVersion)
 	if err != nil {
 		return err
 	}
 
 	if localVersion == serverVersion {
-		log.Printf("\nUp to date!")
+		pr.Printf("Up to date!")
 		return nil
 	}
 
-	log.Printf("\nUpdate Available. Server version: %s, Client version:%s\n", serverVersion, localVersion)
+	pr.Printf("Update Available. Server version: %s, Client version:%s", serverVersion, localVersion)
 	err = u.update(qc, disk, pr)
 
 	if err != nil {
 		return err
 	}
 
-	log.Printf("\nUpdate success!")
+	pr.Printf("Update success!")
 	return nil
 }
 
 func (u *Updater) update(qc transport.Client, myDisk *disk.Disk, pr progress.Progress) error {
 	pr.SetDescription("Getting partition scheme", 5)
-	imageUrlVersion := strings.Replace(server.API_IMAGES_PARTITION_TABLE, "{image}", *u.conf.Id, 1)
-	partitionTableBytes, err := qc.GetBytes(imageUrlVersion)
+	imageUrlVersion := strings.Replace(server.API_IMAGES_PARTITION_TABLE, "{id}", *u.conf.Id, 1)
+	var remotePartitionTable disk.PartitionTable
+	if err := qc.GetObject(imageUrlVersion, &remotePartitionTable); err != nil {
+		return err
+	}
+
+	remoteBootPartition, err := remotePartitionTable.GetBootPartition()
 	if err != nil {
 		return err
 	}
 
-	dec := gob.NewDecoder(bytes.NewBuffer(partitionTableBytes))
-	var remoteDisk disk.Disk
-	err = dec.Decode(&remoteDisk)
-	remoteDisk.GetPartitionTable().Print()
+	pr.SetDescription("Downloading boot partition", 6)
+	compressedBootPartitionInTemp, err := os.CreateTemp(os.TempDir(), "boot")
+	if err != nil {
+		return err
+	}
 
-	return err
+	downloadUrlBoot := strings.Replace(server.API_IMAGES_DOWNLOAD, "{id}", *u.conf.Id, 1)
+	downloadUrlBoot = strings.Replace(downloadUrlBoot, "{partitionIndex}", strconv.Itoa(remoteBootPartition.Index), 1)
+	downloadUrlBoot = strings.Replace(downloadUrlBoot, "{compression}", *u.conf.CompressionTool, 1)
+	if err := qc.DownloadFile(compressedBootPartitionInTemp.Name(), downloadUrlBoot, progress.NewProgressReporter(pr, 20)); err != nil {
+		return err
+	}
+
+	pr.SetDescription("Checking boot partition", 20)
+	if err := u.conf.Runner.RunPath(*u.conf.CompressionTool, "-t", compressedBootPartitionInTemp.Name()); err != nil {
+		return err
+	}
+
+	pr.SetDescription("Partitioning disk if necessary", 21)
+	if err := myDisk.MergePartitionTable(&remotePartitionTable); err != nil {
+		return err
+	}
+
+	pr.Printf("Partition table:\nRemote: %s\nFinal: %s",
+		remotePartitionTable.GetInfo(),
+		myDisk.GetPartitionTable().GetInfo())
+	if err := myDisk.Write(); err != nil {
+		return err
+	}
+
+	pr.SetDescription("Rereading partition table", 21)
+	if err := u.conf.Runner.RunPath("/bin/partprobe"); err != nil {
+		return err
+	}
+
+	return nil
 }

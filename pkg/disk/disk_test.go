@@ -2,6 +2,7 @@ package disk
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -114,13 +115,10 @@ func TestMergesWithDesiredTable(t *testing.T) {
 
 	tested := NewDisk(imageFile)
 	assert.Nil(t, tested.Read())
-	tested.GetPartitionTable().Print()
 	assert.Nil(t, tested.MergePartitionTable(desiredTable))
-	tested.GetPartitionTable().Print()
 	assert.Nil(t, tested.Write())
-	tested.GetPartitionTable().Print()
 	assert.Nil(t, tested.Read())
-	tested.GetPartitionTable().Print()
+	fmt.Print(tested.GetPartitionTable().GetInfo())
 
 	originalStartBoot := uint32(1)
 	originalSizeBoot := uint32((48 * 1024 * 1024) / sectorSize) //48mb

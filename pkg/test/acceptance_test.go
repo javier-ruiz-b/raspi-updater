@@ -24,10 +24,6 @@ var clientConfig *config.ClientConfig
 var imagesDir string = "../testdata"
 
 func setup() {
-	// _, filename, _, ok := runtime.Caller(0)
-	// if !ok {
-	// 	panic("Failed to get current frame")
-	// }
 	if runtime.GOOS == "windows" {
 		path := os.Getenv("PATH")
 		tools_win_dir, _ := filepath.Abs("../../tools_win")
@@ -78,7 +74,7 @@ func TestSmoke(t *testing.T) {
 
 	err := client.RunClient(clientConfig)
 
-	assert.False(t, runner.IsRun())
+	assert.True(t, runner.IsRun())
 	assert.EqualError(t, err, "not implemented")
 }
 
@@ -108,9 +104,11 @@ func newClientConfig() *config.ClientConfig {
 	result := config.NewClientConfig()
 
 	id := "acceptance"
+	compressionTool := "xz"
 	result.Id = &id
 	result.DiskDevice = &clientImage
 	result.Runner = runner.NewFakeRunner()
+	result.CompressionTool = &compressionTool
 
 	return result
 }

@@ -13,9 +13,13 @@ func NewFakeRunner() *FakeRunner {
 	return &FakeRunner{isRun: false}
 }
 
-func (r *FakeRunner) Run(file *os.File) error {
-	log.Print("Faking successful ", file.Name(), " execution")
-	r.isRun = true
+func (r *FakeRunner) Run(file *os.File, args ...string) error {
+	return r.RunPath(file.Name())
+}
+
+func (o *FakeRunner) RunPath(filePath string, args ...string) error {
+	log.Print("Faking successful ", filePath, " execution")
+	o.isRun = true
 	return nil
 }
 
