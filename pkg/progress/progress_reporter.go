@@ -1,6 +1,10 @@
 package progress
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+	"os"
+)
 
 func NewMainProgressReporter() Progress {
 	result := NewProgressReporter(nil, 100)
@@ -10,6 +14,7 @@ func NewMainProgressReporter() Progress {
 
 type ProgressReporter struct {
 	parent      Progress
+	Stdout      io.Writer
 	description string
 	percent     int
 	minPercent  int
@@ -23,6 +28,7 @@ func NewProgressReporter(parentReporter Progress, maxPercent int) *ProgressRepor
 	}
 
 	return &ProgressReporter{
+		Stdout:     os.Stdout,
 		parent:     parentReporter,
 		minPercent: minPercent,
 		maxPercent: maxPercent,
@@ -36,7 +42,7 @@ func NewProgressReporter(parentReporter Progress, maxPercent int) *ProgressRepor
 // Initializing -
 
 func (pr *ProgressReporter) SetDescription(description string, percent int) {
-	fmt.Println()
+	fmt.Fprintln(pr.Stdout)
 	pr.description = description
 	pr.SetPercent(percent)
 }
@@ -59,10 +65,10 @@ func (pr *ProgressReporter) Description() string {
 }
 
 func (pr *ProgressReporter) Printf(format string, a ...any) {
-	fmt.Printf("\\33[2K\r"+format+"\n", a...)
+	fmt.Fprintf(pr.Stdout, "\\33[2K\r"+format+"\n", a...)
 	pr.updateStdout()
 }
 
 func (pr *ProgressReporter) updateStdout() {
-	fmt.Printf("\\33[2K\r [ %3d%% ] %s", pr.Percent(), pr.Description())
+	fmt.Fprintf(pr.Stdout, "\\33[2K\r [%3d%% ] %s", pr.Percent(), pr.Description())
 }

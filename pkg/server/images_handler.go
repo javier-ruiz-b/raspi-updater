@@ -15,104 +15,78 @@ import (
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/images"
 )
 
-type ImagesHandler struct {
-	imageDir *images.ImageDir
-}
-
-func (i *ImagesHandler) imageVersionHandler(w http.ResponseWriter, r *http.Request) {
+func (hc *HandlerConfig) imageVersionHandler(w http.ResponseWriter, r *http.Request) (int, []byte) {
 	imageName := mux.Vars(r)["id"]
-	image, err := i.imageDir.FindImage(imageName)
+
+	image, err := hc.imageDir.FindImage(imageName)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusNotFound, []byte(err.Error())
 	}
 
 	re := regexp.MustCompile(`.*_(.*)\.img.*`)
 	versionMatch := re.FindStringSubmatch(image.Name())
 	if len(versionMatch) != 2 {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Couldn't get version for " + image.Name()))
-		return
+		return http.StatusNotFound, []byte("Couldn't get version for " + image.Name())
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(versionMatch[1]))
+	return http.StatusOK, []byte(versionMatch[1])
 }
 
-func (i *ImagesHandler) imagePartitionTableHandler(w http.ResponseWriter, r *http.Request) {
+func (hc *HandlerConfig) imagePartitionTableHandler(w http.ResponseWriter, r *http.Request) (int, []byte) {
 	imageName := mux.Vars(r)["id"]
 
-	disk, err := i.getDisk(imageName)
+	disk, err := getDisk(*hc.imageDir, imageName)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
 	err = gob.NewEncoder(w).Encode(disk.GetPartitionTable())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
-	w.WriteHeader(http.StatusOK)
+	return http.StatusOK, nil
 }
 
-func (i *ImagesHandler) imageDownload(w http.ResponseWriter, r *http.Request) {
+func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (int, []byte) {
 	imageName := mux.Vars(r)["id"]
 	compressor := mux.Vars(r)["compression"]
 	partitionIndex, err := strconv.Atoi(mux.Vars(r)["partitionIndex"])
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusBadRequest, []byte(err.Error())
 	}
 
-	disk, err := i.getDisk(imageName)
+	disk, err := getDisk(*hc.imageDir, imageName)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
 	if partitionIndex >= len(disk.GetPartitionTable().Partitions) {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Partition not found"))
-		return
+		return http.StatusBadRequest, []byte("Partition not found")
 	}
 
 	partition := disk.GetPartitionTable().Partitions[partitionIndex]
 
-	image, err := i.imageDir.FindImage(imageName)
+	image, err := hc.imageDir.FindImage(imageName)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
 	stream, err := image.OpenImage()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusInternalServerError, []byte(err.Error())
 	}
 	defer stream.Close()
 
 	startOffset := int64(disk.GetPartitionTable().SectorSize) * int64(partition.Start)
 	_, err = io.CopyN(ioutil.Discard, stream, startOffset)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
 	stdin, stdout, err := compressPipe(compressor)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-		return
+		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -128,8 +102,10 @@ func (i *ImagesHandler) imageDownload(w http.ResponseWriter, r *http.Request) {
 	}()
 	_, err = io.Copy(w, stdout)
 	if err != nil {
-		log.Print("Error compressing image stdout", err)
+		return http.StatusInternalServerError, []byte(err.Error())
+		// log.Print("Error compressing image stdout", err)
 	}
+	return http.StatusOK, nil
 	// log.Print("Compressed ", num, " bytes")
 }
 
@@ -152,8 +128,8 @@ func compressPipe(compressor string) (io.WriteCloser, io.ReadCloser, error) {
 	return stdin, stdout, err
 }
 
-func (i *ImagesHandler) getDisk(imageName string) (*disk.Disk, error) {
-	image, err := i.imageDir.FindImage(imageName)
+func getDisk(imageDir images.ImageDir, imageName string) (*disk.Disk, error) {
+	image, err := imageDir.FindImage(imageName)
 	if err != nil {
 		return nil, err
 	}

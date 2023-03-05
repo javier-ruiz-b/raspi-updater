@@ -6,6 +6,6 @@ import (
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/version"
 )
 
-func versionHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(version.VERSION))
+func (hc *HandlerConfig) versionHandler(w http.ResponseWriter, r *http.Request) (int, []byte) {
+	return http.StatusOK, []byte(version.VERSION)
 }

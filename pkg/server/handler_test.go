@@ -50,7 +50,7 @@ func getRequest(t *testing.T, url string) *httptest.ResponseRecorder {
 	options := config.NewServerConfig()
 	binaryDir := "../testdata/bin"
 	options.UpdaterDir = &binaryDir
-	tested := newHandler(options)
+	tested := newMainHandler(options)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -16,22 +17,44 @@ const API_VERSION string = "/version"
 
 type HandlerConfig struct {
 	binariesDir string
+	imageDir    *images.ImageDir
 }
 
-func newHandler(options *config.ServerConfig) http.Handler {
+func newMainHandler(options *config.ServerConfig) http.Handler {
 	serveMux := mux.NewRouter()
 	hc := &HandlerConfig{
 		binariesDir: *options.UpdaterDir,
-	}
-	ih := &ImagesHandler{
-		imageDir: images.NewImageDir(*options.ImagesDir),
+		imageDir:    images.NewImageDir(*options.ImagesDir),
 	}
 
-	serveMux.HandleFunc(API_VERSION, versionHandler)
-	serveMux.HandleFunc(API_UPDATE, hc.updateHandler)
-	serveMux.HandleFunc(API_IMAGES_VERSION, ih.imageVersionHandler)
-	serveMux.HandleFunc(API_IMAGES_PARTITION_TABLE, ih.imagePartitionTableHandler)
-	serveMux.HandleFunc(API_IMAGES_DOWNLOAD, ih.imageDownload)
+	serveMux.Handle(API_VERSION, newPathHandler(hc.versionHandler))
+	serveMux.Handle(API_UPDATE, newPathHandler(hc.updateHandler))
+	serveMux.Handle(API_IMAGES_VERSION, newPathHandler(hc.imageVersionHandler))
+	serveMux.Handle(API_IMAGES_PARTITION_TABLE, newPathHandler(hc.imagePartitionTableHandler))
+	serveMux.Handle(API_IMAGES_DOWNLOAD, newPathHandler(hc.imageDownload))
 
 	return serveMux
+}
+
+type PathHandler struct {
+	handleFunc func(w http.ResponseWriter, r *http.Request) (int, []byte)
+}
+
+func newPathHandler(handleFunc func(w http.ResponseWriter, r *http.Request) (int, []byte)) *PathHandler {
+	return &PathHandler{
+		handleFunc: handleFunc,
+	}
+}
+
+func (p *PathHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	statusCode, response := p.handleFunc(w, r)
+
+	if statusCode != http.StatusOK {
+		log.Printf("[%d] %s\n", statusCode, string(response))
+	}
+
+	w.WriteHeader(statusCode)
+	if response != nil {
+		w.Write(response)
+	}
 }

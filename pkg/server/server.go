@@ -36,7 +36,7 @@ func NewServer(options *config.ServerConfig) *Server {
 	}
 
 	server := &http3.Server{
-		Handler:    newHandler(options),
+		Handler:    newMainHandler(options),
 		Addr:       *options.Address,
 		QuicConfig: quicConf,
 	}
