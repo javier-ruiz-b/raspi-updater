@@ -21,6 +21,7 @@ func TestSubProgressPercent(t *testing.T) {
 	parent.SetPercent(50)
 
 	testedSub := NewProgressReporter(parent, 100)
+	testedSub.Stdout = &stdoutBuf
 	testedSub.SetPercent(50)
 
 	assert.Equal(t, 75, testedSub.Percent())
@@ -39,6 +40,7 @@ func TestSubProgresstDescription(t *testing.T) {
 	parent.SetDescription("Foo", 0)
 
 	tested := NewProgressReporter(parent, 100)
+	tested.Stdout = &stdoutBuf
 	tested.SetDescription("Bar", 0)
 
 	assert.Equal(t, "Foo: Bar", tested.Description())

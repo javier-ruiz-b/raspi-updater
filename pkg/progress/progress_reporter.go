@@ -8,7 +8,6 @@ import (
 
 func NewMainProgressReporter() Progress {
 	result := NewProgressReporter(nil, 100)
-	result.SetDescription("Initializing...", 0)
 	return result
 }
 
@@ -28,10 +27,11 @@ func NewProgressReporter(parentReporter Progress, maxPercent int) *ProgressRepor
 	}
 
 	return &ProgressReporter{
-		Stdout:     os.Stdout,
-		parent:     parentReporter,
-		minPercent: minPercent,
-		maxPercent: maxPercent,
+		Stdout:      os.Stdout,
+		description: "",
+		parent:      parentReporter,
+		minPercent:  minPercent,
+		maxPercent:  maxPercent,
 	}
 }
 
