@@ -159,6 +159,26 @@ func TestReadsVersion(t *testing.T) {
 	assert.Equal(t, "1.2.3.4", version)
 }
 
+func TestWritesToAndReadsFromPartition(t *testing.T) {
+	tested := NewDisk(imageFile)
+	err := tested.Read()
+	assert.Nil(t, err)
+	stream, err := tested.GetPartitionTable().Partitions[0].OpenStream()
+	assert.Nil(t, err)
+
+	stream.Write([]byte("Example"))
+	stream.Close()
+
+	imageStream, err := os.OpenFile(imageFile, os.O_RDONLY, 0)
+	assert.Nil(t, err)
+	_, err = imageStream.Seek(512*1, 0)
+	assert.Nil(t, err)
+
+	var buffer bytes.Buffer
+	io.CopyN(&buffer, imageStream, 7)
+	assert.Equal(t, "Example", buffer.String())
+}
+
 func check(err error) {
 	if err != nil {
 		log.Panic(err)

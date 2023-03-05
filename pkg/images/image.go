@@ -50,7 +50,7 @@ func commandOutputToPipe(name string, args ...string) (io.ReadCloser, error) {
 	return stdout, nil
 }
 
-func (i *Image) ReadDisk() (*disk.Disk, error) {
+func (i *Image) GetPartitionTable() (*disk.PartitionTable, error) {
 	image, err := i.OpenImage()
 	if err != nil {
 		return nil, err
@@ -75,5 +75,5 @@ func (i *Image) ReadDisk() (*disk.Disk, error) {
 		return nil, err
 	}
 
-	return result, nil
+	return result.GetPartitionTable(), nil
 }

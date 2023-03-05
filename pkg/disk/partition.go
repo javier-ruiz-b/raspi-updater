@@ -3,14 +3,15 @@ package disk
 import (
 	"io"
 	"io/fs"
+	"os"
 
 	diskfs "github.com/diskfs/go-diskfs"
 )
 
 type Partition struct {
 	Type   PartitionType
-	Start  uint32 // in megabyte
-	Size   uint32 // in megabyte
+	Start  uint32
+	Size   uint32
 	Index  int
 	parent *Disk
 }
@@ -60,12 +61,12 @@ func (p *Partition) OpenFile(path string, flag int) (io.ReadWriteCloser, error) 
 	return fs.OpenFile(path, flag)
 }
 
-// func (p *Partition) OpenStream( io.ReadCloser ) (io.ReadWriteCloser, error) {
-// 	file, err := os.OpenFile(diskdevice, os.O_RDONLY, 0)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func (p *Partition) OpenStream() (io.ReadWriteCloser, error) {
+	file, err := os.OpenFile(p.parent.diskDevice, os.O_RDWR, 0)
+	if err != nil {
+		return nil, err
+	}
 
-// 	_, err = file.Seek(int64(p.parent.partitionTable.SectorSize)*int64(p.Start), 0)
-// 	return file, err
-// }
+	_, err = file.Seek(int64(p.parent.partitionTable.SectorSize)*int64(p.Start), 0)
+	return file, err
+}

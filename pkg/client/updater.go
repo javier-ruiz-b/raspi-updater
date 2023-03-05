@@ -1,10 +1,13 @@
 package client
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/disk"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/progress"
@@ -106,7 +109,7 @@ func (u *Updater) update(qc transport.Client, myDisk *disk.Disk, pr progress.Pro
 	}
 
 	pr.SetDescription("Checking boot partition", 20)
-	if err := u.conf.Runner.RunPath(*u.conf.CompressionTool, "-t", compressedBootPartitionInTemp.Name()); err != nil {
+	if err := compression.CheckFile(*u.conf.CompressionTool, compressedBootPartitionInTemp.Name()); err != nil {
 		return err
 	}
 
@@ -124,6 +127,33 @@ func (u *Updater) update(qc transport.Client, myDisk *disk.Disk, pr progress.Pro
 
 	pr.SetDescription("Rereading partition table", 21)
 	if err := u.conf.Runner.RunPath("/bin/partprobe"); err != nil {
+		return err
+	}
+	if err := myDisk.Read(); err != nil {
+		return err
+	}
+
+	pr.SetDescription("Writing boot partition", 22)
+	localBootPatition, err := myDisk.GetPartitionTable().GetBootPartition()
+	if err != nil {
+		return err
+	}
+	if localBootPatition.Size != remoteBootPartition.Size {
+		return fmt.Errorf("local and remote boot partition sizes differ. Local: %d != Remote: %d",
+			localBootPatition.Size, remoteBootPartition.Size)
+	}
+
+	bootSize := int64(remoteBootPartition.Size)
+	counter := progress.NewIoCounter(bootSize, progress.NewProgressReporter(pr, 30))
+
+	bootPartitionStream, err := localBootPatition.OpenStream()
+	if err != nil {
+		return err
+	}
+
+	compressedBootPartitionInTemp.Seek(0, 0)
+	compressor := compression.NewStreamDecompressor(io.TeeReader(compressedBootPartitionInTemp, counter), bootPartitionStream, *u.conf.CompressionTool)
+	if err = compressor.Run(); err != nil {
 		return err
 	}
 

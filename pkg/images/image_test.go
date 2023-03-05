@@ -26,28 +26,28 @@ func TestOpensRawImage(t *testing.T) {
 	createsImageWithOnePartition(t, imageFile)
 	tested := Image{filePath: imageFile}
 
-	disk, err := tested.ReadDisk()
+	partitionTable, err := tested.GetPartitionTable()
 
 	assert.Nil(t, err)
-	assert.Equal(t, uint32((48*1024*1024)/512), disk.GetPartitionTable().Partitions[0].Size)
+	assert.Equal(t, uint32((48*1024*1024)/512), partitionTable.Partitions[0].Size)
 }
 
 func TestOpensLz4CompressedImage(t *testing.T) {
 	tested := Image{filePath: "../testdata/acceptance_1.0.img.lz4"}
 
-	disk, err := tested.ReadDisk()
+	partitionTable, err := tested.GetPartitionTable()
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(disk.GetPartitionTable().Partitions))
+	assert.Equal(t, 2, len(partitionTable.Partitions))
 }
 
 func TestOpensXzCompressedImage(t *testing.T) {
 	tested := Image{filePath: "../testdata/raspberry_1.0.img.xz"}
 
-	disk, err := tested.ReadDisk()
+	partitionTable, err := tested.GetPartitionTable()
 
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(disk.GetPartitionTable().Partitions))
+	assert.Equal(t, 2, len(partitionTable.Partitions))
 }
 
 // ------------
