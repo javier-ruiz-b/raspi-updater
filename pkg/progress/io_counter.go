@@ -33,7 +33,7 @@ func (ic *IoCounter) Write(p []byte) (int, error) {
 	} else {
 		description = fmt.Sprintf("Transferred %s", humanize.Bytes(ic.Transferred))
 	}
-	ic.pr.SetDescription(description, progressPercent)
+	ic.pr.UpdateDescription(description, progressPercent)
 
 	return n, nil
 }

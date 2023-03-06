@@ -3,6 +3,8 @@ package disk
 import (
 	"errors"
 	"fmt"
+
+	"github.com/dustin/go-humanize"
 )
 
 func mergePartitionTables(desired *PartitionTable, existing *PartitionTable) (*PartitionTable, error) {
@@ -16,8 +18,8 @@ func mergePartitionTables(desired *PartitionTable, existing *PartitionTable) (*P
 	}
 
 	if desired.Size > existing.Size {
-		return nil, fmt.Errorf("the resulting partition table does not fit in the disk. Necessary sectors: %d. Available sectors: %d",
-			desired.Size, existing.Size)
+		return nil, fmt.Errorf("the resulting partition table does not fit in the disk. Required: %s. Available: %s",
+			humanize.Bytes(desired.Size), humanize.Bytes(existing.Size))
 	}
 
 	desiredBoot, err := desired.GetBootPartition()
@@ -49,8 +51,8 @@ func mergePartitionTables(desired *PartitionTable, existing *PartitionTable) (*P
 	}
 
 	if totalSize > existing.Size {
-		return nil, fmt.Errorf("the resulting partition table does not fit in the disk. Necessary sectors: %d. Available sectors: %d",
-			totalSize, uint32(existing.Size))
+		return nil, fmt.Errorf("the resulting partition table does not fit in the disk. Required: %s, available: %s",
+			humanize.Bytes(totalSize), humanize.Bytes(existing.Size))
 	}
 
 	return &PartitionTable{

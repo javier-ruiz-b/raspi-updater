@@ -38,12 +38,7 @@ func (d *Disk) Read() error {
 		return errors.New("not a MBR partition table")
 	}
 
-	result := &PartitionTable{
-		Size:       uint64(disk.Size),
-		SectorSize: int(disk.LogicalBlocksize),
-		Partitions: []Partition{},
-	}
-
+	partitions := []Partition{}
 	for i, part := range mbrTable.GetPartitions() {
 		mbrPart, ok := part.(*mbr.Partition)
 		if !ok {
@@ -53,7 +48,7 @@ func (d *Disk) Read() error {
 			continue
 		}
 
-		result.Partitions = append(result.Partitions, Partition{
+		partitions = append(partitions, Partition{
 			Type:   PartitionType(mbrPart.Type),
 			Start:  mbrPart.Start,
 			Size:   mbrPart.Size,
@@ -61,9 +56,16 @@ func (d *Disk) Read() error {
 			parent: d,
 		})
 	}
-
-	d.partitionTable = result
-
+	size := uint64(disk.Size)
+	if len(partitions) > 0 {
+		lastSectorBytes := partitions[len(partitions)-1].EndSector() * uint64(disk.LogicalBlocksize)
+		size = Max(size, lastSectorBytes)
+	}
+	d.partitionTable = &PartitionTable{
+		Size:       size,
+		SectorSize: int(disk.LogicalBlocksize),
+		Partitions: partitions,
+	}
 	return nil
 }
 
@@ -143,4 +145,11 @@ func (d *Disk) MergePartitionTable(desired *PartitionTable) error {
 		d.partitionTable = result
 	}
 	return err
+}
+
+func Max(x, y uint64) uint64 {
+	if x < y {
+		return y
+	}
+	return x
 }

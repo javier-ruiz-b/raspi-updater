@@ -85,7 +85,7 @@ func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (
 	w.WriteHeader(http.StatusOK)
 
 	size := int64(partition.Size) * int64(partitionTable.SectorSize)
-	compressor := compression.NewStreamCompressorN(stream, size, w, compressionBinary)
+	compressor := compression.NewStreamCompressorN(w, stream, size, compressionBinary)
 	if err = compressor.Run(); err != nil {
 		return http.StatusInternalServerError, []byte(err.Error())
 	}

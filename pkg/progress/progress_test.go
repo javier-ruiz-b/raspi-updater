@@ -32,7 +32,7 @@ func TestDescription(t *testing.T) {
 	tested.SetDescription("Init", 0)
 
 	assert.Equal(t, "Init", tested.Description())
-	assert.Equal(t, "\n\\33[2K\r [  0% ] Init", stdoutBuf.String())
+	assert.Equal(t, "\r [  0% ] Init", stdoutBuf.String())
 }
 
 func TestSubProgresstDescription(t *testing.T) {

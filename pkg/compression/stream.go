@@ -16,7 +16,7 @@ type CompressionStream struct {
 
 func (c *CompressionStream) Run() error {
 	stdin, stdout, commandErrChannel := commandPipe(c.command, c.commandArgs...)
-	resultChannel := make(chan error)
+	resultChannel := make(chan error, 1)
 	go func() {
 		var copied int64 = -1
 		var err error

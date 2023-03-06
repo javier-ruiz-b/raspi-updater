@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 func NewMainProgressReporter() Progress {
@@ -18,6 +19,7 @@ type ProgressReporter struct {
 	percent     int
 	minPercent  int
 	maxPercent  int
+	lastUpdate  int64
 }
 
 func NewProgressReporter(parentReporter Progress, maxPercent int) *ProgressReporter {
@@ -42,9 +44,14 @@ func NewProgressReporter(parentReporter Progress, maxPercent int) *ProgressRepor
 // Initializing -
 
 func (pr *ProgressReporter) SetDescription(description string, percent int) {
-	fmt.Fprintln(pr.Stdout)
+	pr.UpdateDescription(description, percent)
+	fmt.Fprintf(pr.Stdout, "\n")
+}
+
+func (pr *ProgressReporter) UpdateDescription(description string, percent int) {
 	pr.description = description
 	pr.SetPercent(percent)
+	pr.updateStdout()
 }
 
 func (pr *ProgressReporter) SetPercent(percent int) {
@@ -65,10 +72,15 @@ func (pr *ProgressReporter) Description() string {
 }
 
 func (pr *ProgressReporter) Printf(format string, a ...any) {
-	fmt.Fprintf(pr.Stdout, "\\33[2K\r"+format+"\n", a...)
+	fmt.Fprintf(pr.Stdout, "\r"+format+"        \n", a...)
 	pr.updateStdout()
 }
 
 func (pr *ProgressReporter) updateStdout() {
-	fmt.Fprintf(pr.Stdout, "\\33[2K\r [%3d%% ] %s", pr.Percent(), pr.Description())
+	nowUnix := time.Now().Unix()
+	if pr.lastUpdate == nowUnix {
+		return
+	}
+	fmt.Fprintf(pr.Stdout, "\r [%3d%% ] %s        ", pr.Percent(), pr.Description())
+	pr.lastUpdate = nowUnix
 }

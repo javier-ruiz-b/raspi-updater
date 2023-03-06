@@ -33,6 +33,10 @@ const (
 	LinuxLVM      PartitionType = 0x8e
 )
 
+func (p *Partition) EndSector() uint64 {
+	return uint64(p.Start + p.Size)
+}
+
 func (p *Partition) ReadDir(path string) ([]fs.FileInfo, error) {
 	disk, err := diskfs.Open(p.parent.diskDevice)
 	if err != nil {

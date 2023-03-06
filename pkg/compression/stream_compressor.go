@@ -4,11 +4,11 @@ import (
 	"io"
 )
 
-func NewStreamCompressor(inStream io.Reader, outStream io.Writer, compressor string) *CompressionStream {
-	return NewStreamCompressorN(inStream, -1, outStream, compressor)
+func NewStreamCompressor(outStream io.Writer, inStream io.Reader, compressor string) *CompressionStream {
+	return NewStreamCompressorN(outStream, inStream, -1, compressor)
 }
 
-func NewStreamCompressorN(inStream io.Reader, sizeIn int64, outStream io.Writer, compressor string) *CompressionStream {
+func NewStreamCompressorN(outStream io.Writer, inStream io.Reader, sizeIn int64, compressor string) *CompressionStream {
 	return &CompressionStream{
 		inStream:    inStream,
 		sizeIn:      sizeIn,

@@ -54,8 +54,8 @@ func setup() {
 }
 
 func teardown() {
-	defer os.RemoveAll(tempDir)
 	serv.Close()
+	os.RemoveAll(tempDir)
 }
 
 func TestUpdateClientBinary(t *testing.T) {
@@ -69,13 +69,13 @@ func TestUpdateClientBinary(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestSmoke(t *testing.T) {
+func TestAcceptance(t *testing.T) {
 	runner := clientConfig.Runner.(*runner.FakeRunner)
 
 	err := client.RunClient(clientConfig)
 
 	assert.True(t, runner.IsRun())
-	assert.EqualError(t, err, "not implemented")
+	assert.Nil(t, err)
 }
 
 func createEmptyImage(imageFile string, size int64) error {

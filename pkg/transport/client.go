@@ -18,6 +18,7 @@ type Client interface {
 	GetString(url string) (string, error)
 	GetObject(url string, object any) error
 	DownloadFile(filepath string, url string, pr progress.Progress) error
+	GetDownloadStream(url string) (io.ReadCloser, int64, error)
 }
 
 type ClientStruct struct {
@@ -74,16 +75,26 @@ func (c *ClientStruct) DownloadFile(filepath string, url string, pr progress.Pro
 	}
 	defer out.Close()
 
-	response, err := c.tc.Get(url)
+	responseStream, contentLength, err := c.GetDownloadStream(url)
 	if err != nil {
 		return err
 	}
+	defer responseStream.Close()
 
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("error getting file %s, unexpected status code: %d", url, response.StatusCode)
+	counter := progress.NewIoCounter(contentLength, pr)
+	_, err = io.Copy(out, io.TeeReader(responseStream, counter))
+	return err
+}
+
+func (c *ClientStruct) GetDownloadStream(url string) (io.ReadCloser, int64, error) {
+	response, err := c.tc.Get(url)
+	if err != nil {
+		return nil, -1, err
 	}
 
-	counter := progress.NewIoCounter(response.ContentLength, pr)
-	_, err = io.Copy(out, io.TeeReader(response.Body, counter))
-	return err
+	if response.StatusCode != http.StatusOK {
+		return nil, -1, fmt.Errorf("error getting stream %s, unexpected status code: %d", url, response.StatusCode)
+	}
+
+	return response.Body, response.ContentLength, nil
 }
