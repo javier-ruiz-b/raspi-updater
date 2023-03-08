@@ -33,7 +33,7 @@ func TestOpensRawImage(t *testing.T) {
 }
 
 func TestOpensLz4CompressedImage(t *testing.T) {
-	tested := Image{filePath: "../testdata/acceptance_1.0.img.lz4"}
+	tested := Image{filePath: "../testdata/raspberry_1.0.img.lz4"}
 
 	partitionTable, err := tested.GetPartitionTable()
 

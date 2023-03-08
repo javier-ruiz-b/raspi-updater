@@ -2,5 +2,3 @@ cmd/updater/linux*
 cmd/updater/windows*
 *.exe
 *.qlog
-acceptancetest.img
-acceptance_1.1.img.lz4
