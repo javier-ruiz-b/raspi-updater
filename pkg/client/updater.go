@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -10,10 +11,10 @@ import (
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/disk"
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/progress"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/selfupdater"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/transport"
+	"github.com/schollz/progressbar/v3"
 )
 
 type Updater struct {
@@ -31,20 +32,19 @@ func NewUpdater(conf *config.ClientConfig) *Updater {
 func (u *Updater) Run() error {
 	u.qc = transport.NewQuicClient(*u.conf.Address, *u.conf.Log)
 	selfupdater := selfupdater.NewSelfUpdater(u.qc, u.conf.Runner)
-	pr := progress.NewMainProgressReporter()
 
-	pr.SetDescription("Checking for client update", 0)
+	log.Print("Checking for client update")
 	updateAvailable, err := selfupdater.IsUpdateAvailable(*u.conf.Version)
 	if err != nil {
 		return err
 	}
 
 	if updateAvailable {
-		pr.SetDescription("Update found", 25)
-		return selfupdater.DownloadAndRunUpdate(progress.NewProgressReporter(pr, 100))
+		log.Print("Update found")
+		return selfupdater.DownloadAndRunUpdate()
 	}
 
-	pr.SetDescription("Reading local disk", 1)
+	log.Print("Reading local disk")
 	_, err = os.Stat(*u.conf.DiskDevice)
 	if err != nil {
 		return err
@@ -55,13 +55,13 @@ func (u *Updater) Run() error {
 		return err
 	}
 
-	pr.SetDescription("Reading local version", 2)
+	log.Print("Reading local version")
 	localVersion, err := u.disk.ReadVersion()
 	if err != nil {
-		pr.Printf("Warning: could not read local version: %v", err)
+		log.Printf("Warning: could not read local version: %v", err)
 	}
 
-	pr.SetDescription("Checking for image update for "+*u.conf.Id, 3)
+	log.Print("Checking for image update for " + *u.conf.Id)
 	imageUrlVersion := strings.Replace(server.API_IMAGES_VERSION, "{id}", *u.conf.Id, 1)
 	serverVersion, err := u.qc.GetString(imageUrlVersion)
 	if err != nil {
@@ -69,16 +69,16 @@ func (u *Updater) Run() error {
 	}
 
 	if localVersion == serverVersion {
-		pr.Printf("Up to date!")
+		log.Print("Up to date!")
 		return nil
 	}
 
-	pr.Printf("Update Available. Server version: %s, Client version:%s", serverVersion, localVersion)
-	return u.update(pr)
+	log.Printf("Update Available. Server version: %s, Client version:%s", serverVersion, localVersion)
+	return u.update()
 }
 
-func (u *Updater) update(pr progress.Progress) error {
-	pr.SetDescription("Getting partition scheme", 5)
+func (u *Updater) update() error {
+	log.Print("Getting partition scheme")
 	imageUrlVersion := strings.Replace(server.API_IMAGES_PARTITION_TABLE, "{id}", *u.conf.Id, 1)
 	var remotePartitionTable disk.PartitionTable
 	if err := u.qc.GetObject(imageUrlVersion, &remotePartitionTable); err != nil {
@@ -90,37 +90,39 @@ func (u *Updater) update(pr progress.Progress) error {
 		return err
 	}
 
-	pr.SetDescription("Downloading boot partition", 6)
+	log.Print("Downloading boot partition")
 	compressedBootPartition, err := os.CreateTemp(os.TempDir(), "boot")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(compressedBootPartition.Name())
 
-	if err := u.qc.DownloadFile(compressedBootPartition.Name(), u.partitionDownloadUrl(remoteBootPartition), progress.NewProgressReporter(pr, 20)); err != nil {
+	if err := u.qc.DownloadFile(compressedBootPartition.Name(), u.partitionDownloadUrl(remoteBootPartition)); err != nil {
+		return err
+	}
+	if _, err = compressedBootPartition.Seek(0, 0); err != nil {
 		return err
 	}
 
-	pr.SetDescription("Checking downloaded boot partition", 20)
+	fmt.Print("Checking downloaded boot partition")
 	if err := compression.CheckFile(*u.conf.CompressionTool, compressedBootPartition.Name()); err != nil {
 		return err
 	}
 
 	localPartitionInfo := u.disk.GetPartitionTable().GetInfo()
-	pr.SetDescription("Partitioning disk if necessary", 21)
+	log.Print("Partitioning disk if necessary")
 	if err := u.disk.MergePartitionTable(&remotePartitionTable); err != nil {
 		return err
 	}
 
-	pr.Printf("Partition table:\nLocal: %s\nRemote: %s\nFinal: %s",
+	log.Printf("Partition table:\nLocal: %s\nRemote: %s\nFinal: %s",
 		localPartitionInfo,
 		remotePartitionTable.GetInfo(),
 		u.disk.GetPartitionTable().GetInfo())
 	if err := u.disk.Write(); err != nil {
 		return err
 	}
-
-	pr.SetDescription("Rereading partition table", 21)
+	log.Print("Rereading partition table")
 	if err := u.conf.Runner.RunPath("/bin/partprobe"); err != nil {
 		return err
 	}
@@ -128,17 +130,13 @@ func (u *Updater) update(pr progress.Progress) error {
 		return err
 	}
 
-	pr.SetDescription("Writing boot partition", 22)
+	log.Print("Writing boot partition")
 	localBootPartition, err := u.disk.GetPartitionTable().GetBootPartition()
 	if err != nil {
 		return err
 	}
 
-	if _, err = compressedBootPartition.Seek(0, 0); err != nil {
-		return err
-	}
-
-	if err = u.writePartition(localBootPartition, compressedBootPartition, progress.NewProgressReporter(pr, 30)); err != nil {
+	if err = u.writePartition(localBootPartition, compressedBootPartition, "Writing boot partition"); err != nil {
 		return err
 	}
 
@@ -153,44 +151,23 @@ func (u *Updater) update(pr progress.Progress) error {
 		if i == remoteBootPartition.Index {
 			continue
 		}
-		localPartition, err := u.disk.GetPartitionTable().GetBootPartition()
-		if err != nil {
-			return err
-		}
-		// localPartitionStream, err := localPartition.OpenStream()
-		// if err != nil {
-		// 	return err
-		// }
-		// defer localPartitionStream.Close()
-
-		minPercent := i * 100 / len(remotePartitionTable.Partitions)
-		maxPercent := (i + 1) * 100 / len(remotePartitionTable.Partitions)
-		pr.SetDescription(fmt.Sprintf("Downloading partition %d / %d", i+1, len(remotePartitionTable.Partitions)), minPercent)
-
+		localPartition := &u.disk.GetPartitionTable().Partitions[i]
 		downloadStream, _, err := u.qc.GetDownloadStream(u.partitionDownloadUrl(&partition))
 		if err != nil {
 			return err
 		}
 		defer downloadStream.Close()
 
-		if err = u.writePartition(localPartition, downloadStream, progress.NewProgressReporter(pr, maxPercent)); err != nil {
+		progressText := fmt.Sprintf("Transferring partition %d / %d", i+1, len(remotePartitionTable.Partitions))
+		if err = u.writePartition(localPartition, downloadStream, progressText); err != nil {
 			return err
 		}
-
-		// partitionSizeBytes := int64(partition.Size * uint32(u.disk.GetPartitionTable().SectorSize))
-		// counter := progress.NewIoCounter(partitionSizeBytes, progress.NewProgressReporter(pr, maxPercent))
-		// compressor := compression.NewStreamDecompressor(io.MultiWriter(localPartitionStream, counter), downloadStream, *u.conf.CompressionTool)
-		// if err := compressor.Run(); err != nil {
-		// 	return err
-		// }
 	}
 
-	pr.SetDescription("Syncing disks", 100)
-
-	return u.conf.Runner.RunPath("/bin/sync")
+	return nil
 }
 
-func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.ReadCloser, pr progress.Progress) error {
+func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.ReadCloser, progressText string) error {
 	partitionStream, err := partition.OpenStream()
 	if err != nil {
 		return err
@@ -200,16 +177,24 @@ func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.R
 	if err := remoteBootPartitionStream.Open(); err != nil {
 		return err
 	}
-	counter := progress.NewIoCounter(int64(partition.SizeBytes()), pr)
-	if _, err := io.Copy(io.MultiWriter(partitionStream, counter), remoteBootPartitionStream); err != nil {
+
+	bar := progressbar.DefaultBytes(int64(partition.SizeBytes()), progressText)
+	if _, err := io.Copy(io.MultiWriter(partitionStream, bar), remoteBootPartitionStream); err != nil {
 		return err
 	}
+
 	if err = remoteBootPartitionStream.Close(); err != nil {
 		return err
 	}
+
+	if err = partitionStream.Close(); err != nil {
+		return err
+	}
+
 	if err := u.conf.Runner.RunPath("/bin/sync"); err != nil {
 		return err
 	}
+
 	return nil
 }
 func (u *Updater) partitionDownloadUrl(partition *disk.Partition) string {

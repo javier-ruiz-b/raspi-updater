@@ -9,8 +9,10 @@ import (
 
 	"github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/partition/mbr"
+	"github.com/hlubek/readercomp"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/client"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/images"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/runner"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
 	"github.com/stretchr/testify/assert"
@@ -22,6 +24,7 @@ var clientImage string
 var serv *server.Server
 var clientConfig *config.ClientConfig
 var imagesDir string = "../testdata"
+var id string = "acceptance"
 
 func setup() {
 	if runtime.GOOS == "windows" {
@@ -43,7 +46,7 @@ func setup() {
 		log.Panic(err)
 	}
 
-	clientImage := tempDir + "/client.img"
+	clientImage = tempDir + "/client.img"
 	err = createEmptyImage(clientImage, 64*1024*1024)
 	if err != nil {
 		log.Panic(err)
@@ -76,6 +79,20 @@ func TestAcceptance(t *testing.T) {
 
 	assert.True(t, runner.IsRun())
 	assert.Nil(t, err)
+	image, err := images.NewImageDir(imagesDir).FindImage(id)
+	assert.Nil(t, err)
+	imageStream, err := image.OpenImage()
+	assert.Nil(t, err)
+	diskStream, err := os.Open(clientImage)
+	assert.Nil(t, err)
+	_, err = imageStream.Seek(512*2048, 1) // skip to first partition
+	assert.Nil(t, err)
+	_, err = diskStream.Seek(512*2048, 1)
+	assert.Nil(t, err)
+	result, err := readercomp.Equal(imageStream, diskStream, 1024*1024)
+	assert.Nil(t, err)
+	log.Print(clientImage)
+	assert.True(t, result, "Disk contents are not equal")
 }
 
 func createEmptyImage(imageFile string, size int64) error {
@@ -103,8 +120,7 @@ func TestMain(m *testing.M) {
 func newClientConfig() *config.ClientConfig {
 	result := config.NewClientConfig()
 
-	id := "acceptance"
-	compressionTool := "xz"
+	compressionTool := "lz4"
 	result.Id = &id
 	result.DiskDevice = &clientImage
 	result.Runner = runner.NewFakeRunner()

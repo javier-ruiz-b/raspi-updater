@@ -18,7 +18,7 @@ func NewImageDir(imagesDir string) *ImageDir {
 }
 
 func (i *ImageDir) FindImage(imageName string) (*Image, error) {
-	matches, err := filepath.Glob(i.imagesDir + "/" + imageName + "*.img*")
+	matches, err := filepath.Glob(i.imagesDir + "/" + imageName + "_*.img*")
 	if err != nil {
 		return nil, err
 	}

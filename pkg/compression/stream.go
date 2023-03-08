@@ -8,7 +8,7 @@ import (
 )
 
 type CompressionStream struct {
-	inStream     io.ReadCloser
+	inStream     io.Reader
 	sizeIn       int64
 	stdoutStream io.ReadCloser
 	command      string
@@ -27,7 +27,7 @@ func (c *CompressionStream) Close() error {
 	if c.runningCmd.ProcessState == nil || !c.runningCmd.ProcessState.Exited() {
 		c.runningCmd.Process.Kill()
 	}
-	return nil //c.inStream.Close()
+	return nil
 }
 
 func (c *CompressionStream) Open() error {

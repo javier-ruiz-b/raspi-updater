@@ -2,7 +2,7 @@ package compression
 
 import "io"
 
-func NewStreamDecompressor(inStream io.ReadCloser, compressor string) *CompressionStream {
+func NewStreamDecompressor(inStream io.Reader, compressor string) *CompressionStream {
 	return &CompressionStream{
 		inStream:    inStream,
 		sizeIn:      -1,

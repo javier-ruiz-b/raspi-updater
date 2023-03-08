@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/progress"
+	"github.com/schollz/progressbar/v3"
 )
 
 type Client interface {
@@ -17,7 +17,7 @@ type Client interface {
 	GetBytes(url string) ([]byte, error)
 	GetString(url string) (string, error)
 	GetObject(url string, object any) error
-	DownloadFile(filepath string, url string, pr progress.Progress) error
+	DownloadFile(filepath string, url string) error
 	GetDownloadStream(url string) (io.ReadCloser, int64, error)
 }
 
@@ -67,7 +67,7 @@ func (c *ClientStruct) GetString(url string) (string, error) {
 	return string(bytes), err
 }
 
-func (c *ClientStruct) DownloadFile(filepath string, url string, pr progress.Progress) error {
+func (c *ClientStruct) DownloadFile(filepath string, url string) error {
 	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
@@ -81,8 +81,11 @@ func (c *ClientStruct) DownloadFile(filepath string, url string, pr progress.Pro
 	}
 	defer responseStream.Close()
 
-	counter := progress.NewIoCounter(contentLength, pr)
-	_, err = io.Copy(out, io.TeeReader(responseStream, counter))
+	bar := progressbar.DefaultBytes(
+		contentLength,
+		"Downloading",
+	)
+	_, err = io.Copy(out, io.TeeReader(responseStream, bar))
 	return err
 }
 

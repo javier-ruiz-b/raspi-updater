@@ -1,6 +1,7 @@
 package disk
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -75,6 +76,11 @@ func (p *Partition) OpenStream() (io.ReadWriteCloser, error) {
 		return nil, err
 	}
 
-	_, err = file.Seek(int64(p.parent.partitionTable.SectorSize)*int64(p.Start), 0)
+	startOffset := int64(p.parent.partitionTable.SectorSize) * int64(p.Start)
+	n, err := file.Seek(startOffset, 0)
+	if n != startOffset {
+		return nil, fmt.Errorf("couldn't seek: %d != %d", n, startOffset)
+	}
+
 	return file, err
 }

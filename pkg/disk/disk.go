@@ -104,9 +104,7 @@ func (d *Disk) Write() error {
 		partition.Size = newPartition.Size
 	}
 
-	disk.Partition(mbrTable)
-
-	return nil
+	return disk.Partition(mbrTable)
 }
 
 func (d *Disk) ReadVersion() (string, error) {

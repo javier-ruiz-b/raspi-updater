@@ -50,16 +50,6 @@ func (i *Image) OpenImage() (io.ReadSeekCloser, error) {
 	return stream, stream.Open()
 }
 
-// func commandOutputToPipe(name string, args ...string) (io.ReadCloser, error) {
-// 	cmd := exec.Command(name, args...)
-// 	stdout, err := cmd.StdoutPipe()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	go cmd.Run()
-// 	return stdout, nil
-// }
-
 func (i *Image) GetPartitionTable() (*disk.PartitionTable, error) {
 	image, err := i.OpenImage()
 	if err != nil {

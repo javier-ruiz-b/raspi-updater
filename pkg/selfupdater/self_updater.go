@@ -5,7 +5,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/progress"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/runner"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/transport"
@@ -23,8 +22,8 @@ func NewSelfUpdater(client transport.Client, runner runner.Runner) *SelfUpdater 
 	}
 }
 
-func (u *SelfUpdater) DownloadAndRunUpdate(progress progress.Progress) error {
-	binaryFile, err := u.downloadBinary(progress) // TODO: add progress functionality
+func (u *SelfUpdater) DownloadAndRunUpdate() error {
+	binaryFile, err := u.downloadBinary()
 	if err != nil {
 		return err
 	}
@@ -41,7 +40,7 @@ func (u *SelfUpdater) IsUpdateAvailable(clientVersion string) (bool, error) {
 	return serverVersion != clientVersion, nil
 }
 
-func (u *SelfUpdater) downloadBinary(progress progress.Progress) (*os.File, error) {
+func (u *SelfUpdater) downloadBinary() (*os.File, error) {
 	tempFile, err := os.CreateTemp(os.TempDir(), "updater")
 	if err != nil {
 		return nil, err
@@ -51,8 +50,8 @@ func (u *SelfUpdater) downloadBinary(progress progress.Progress) (*os.File, erro
 	filename := runtime.GOOS + "-" + runtime.GOARCH
 	url := strings.Replace(server.API_UPDATE, "{filename}", filename, 1)
 
-	progress.SetPercent(0)
-	err = u.client.DownloadFile(tempFile.Name(), url, progress)
+	err = u.client.DownloadFile(tempFile.Name(), url)
 	tempFile.Chmod(0777)
+
 	return tempFile, err
 }

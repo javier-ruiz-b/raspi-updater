@@ -2,6 +2,7 @@ package progress
 
 import (
 	"fmt"
+	"io"
 
 	humanize "github.com/dustin/go-humanize"
 )
@@ -11,6 +12,8 @@ type IoCounter struct {
 	contentLength int64
 	pr            Progress
 }
+
+var _ io.WriteCloser = (*IoCounter)(nil)
 
 func NewIoCounter(contentLength int64, pr Progress) *IoCounter {
 	pr.SetPercent(0)
@@ -36,4 +39,9 @@ func (ic *IoCounter) Write(p []byte) (int, error) {
 	ic.pr.UpdateDescription(description, progressPercent)
 
 	return n, nil
+}
+
+func (ic *IoCounter) Close() error {
+	ic.pr.SetDescription("Finished", 100)
+	return nil
 }
