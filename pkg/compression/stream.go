@@ -1,61 +1,74 @@
 package compression
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"os/exec"
 )
 
 type CompressionStream struct {
-	inStream    io.Reader
-	sizeIn      int64
-	outStream   io.Writer
-	sizeOut     int64
-	command     string
-	commandArgs []string
+	inStream     io.ReadCloser
+	sizeIn       int64
+	stdoutStream io.ReadCloser
+	command      string
+	commandArgs  []string
+	runningCmd   *exec.Cmd
+	stderrBuffer bytes.Buffer
+	finished     bool
 }
 
-func (c *CompressionStream) Run() error {
-	stdin, stdout, commandErrChannel := commandPipe(c.command, c.commandArgs...)
-	resultChannel := make(chan error, 1)
-	go func() {
-		var copied int64 = -1
-		var err error
+var _ io.ReadSeekCloser = (*CompressionStream)(nil)
 
-		if c.sizeIn == -1 {
-			_, err = io.Copy(stdin, c.inStream)
-		} else {
-			copied, err = io.CopyN(stdin, c.inStream, c.sizeIn)
-		}
+func (c *CompressionStream) Close() error {
+	if c.runningCmd == nil {
+		return fmt.Errorf("not running")
+	}
+	if c.runningCmd.ProcessState == nil || !c.runningCmd.ProcessState.Exited() {
+		c.runningCmd.Process.Kill()
+	}
+	return nil //c.inStream.Close()
+}
 
-		stdin.Close()
-		if c.sizeIn != copied {
-			resultChannel <- fmt.Errorf("did not copy all contents. Expected: %d, copied: %d", c.sizeIn, copied)
-			return
-		}
-		resultChannel <- err
-	}()
+func (c *CompressionStream) Open() error {
+	c.runningCmd = exec.Command(c.command, c.commandArgs...)
 
-	var copied int64 = -1
-	var err error
-	if c.sizeOut == -1 {
-		_, err = io.Copy(c.outStream, stdout)
+	if c.sizeIn == -1 {
+		c.runningCmd.Stdin = c.inStream
 	} else {
-		copied, err = io.CopyN(c.outStream, stdout, c.sizeOut)
+		c.runningCmd.Stdin = &io.LimitedReader{R: c.inStream, N: c.sizeIn}
 	}
 
-	commandErr := <-commandErrChannel
-	if commandErr != nil {
-		return commandErr
+	var err error
+	c.stdoutStream, err = c.runningCmd.StdoutPipe()
+	if err != nil {
+		return err
 	}
 
-	compressErr := <-resultChannel
-	if compressErr != nil {
-		return compressErr
-	}
+	stderrBuffer := &bytes.Buffer{}
+	c.runningCmd.Stderr = stderrBuffer
 
-	if c.sizeOut != copied {
-		return fmt.Errorf("did not copy all contents. Expected: %d, copied: %d", c.sizeOut, copied)
-	}
+	c.finished = false
 
+	err = c.runningCmd.Start()
 	return err
+}
+
+func (c *CompressionStream) Read(p []byte) (n int, err error) {
+	n, err = c.stdoutStream.Read(p)
+	if err == io.EOF {
+		c.finished = true
+		cmdErr := c.runningCmd.Wait()
+		if cmdErr != nil {
+			err = fmt.Errorf("%v.  Stderr: %s", cmdErr, c.stderrBuffer.String())
+		}
+	}
+	return n, err
+}
+
+func (c *CompressionStream) Seek(offset int64, whence int) (int64, error) {
+	if whence != 1 {
+		return -1, fmt.Errorf("seek allows only whence == 1")
+	}
+	return io.CopyN(io.Discard, c.stdoutStream, offset)
 }

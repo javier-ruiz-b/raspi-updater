@@ -82,13 +82,30 @@ func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (
 		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
-	w.WriteHeader(http.StatusOK)
-
 	size := int64(partition.Size) * int64(partitionTable.SectorSize)
-	compressor := compression.NewStreamCompressorN(w, stream, size, compressionBinary)
-	if err = compressor.Run(); err != nil {
+	compressor := compression.NewStreamCompressorN(stream, size, compressionBinary)
+	if err = compressor.Open(); err != nil {
 		return http.StatusInternalServerError, []byte(err.Error())
 	}
+	defer compressor.Close()
+
+	// w.WriteHeader(http.StatusOK)
+
+	if _, err = io.Copy(w, compressor); err != nil {
+		return http.StatusInternalServerError, []byte(err.Error())
+	}
+
+	// if err = compressor.Run(); err != nil {
+	// 	return http.StatusInternalServerError, []byte(err.Error())
+	// }
+
+	// w.WriteHeader(http.StatusOK)
+
+	// size := int64(partition.Size) * int64(partitionTable.SectorSize)
+	// compressor := compression.NewStreamCompressorN(w, stream, size, compressionBinary)
+	// if err = compressor.Run(); err != nil {
+	// 	return http.StatusInternalServerError, []byte(err.Error())
+	// }
 
 	return http.StatusOK, nil
 }

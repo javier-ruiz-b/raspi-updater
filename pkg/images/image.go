@@ -4,9 +4,9 @@ import (
 	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
 
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/disk"
 )
 
@@ -18,37 +18,47 @@ func (i *Image) Name() string {
 	return i.filePath
 }
 
-func (i *Image) OpenImage() (io.ReadCloser, error) {
+func (i *Image) OpenImage() (io.ReadSeekCloser, error) {
 	fileInfo, err := os.Stat(i.filePath)
 	if err != nil {
 		return nil, err
 	}
+
+	inStream, err := os.Open(i.filePath)
+	if err != nil {
+		return inStream, err
+	}
+
+	compressionTool := ""
 	name := strings.ToLower(fileInfo.Name())
 	switch {
 	case strings.HasSuffix(name, ".img"):
-		return os.Open(i.filePath)
+		return inStream, nil
 	case strings.HasSuffix(name, ".img.lz4"):
-		return commandOutputToPipe("lz4", "-dc", i.filePath)
+		compressionTool = "lz4"
 	case strings.HasSuffix(name, ".img.xz"):
-		return commandOutputToPipe("xz", "-dc", i.filePath)
+		compressionTool = "xz"
 	case strings.HasSuffix(name, ".img.zstd"):
-		return commandOutputToPipe("zstd", "-dc", i.filePath)
+		compressionTool = "zstd"
 	case strings.HasSuffix(name, ".img.gz"):
-		return commandOutputToPipe("gzip", "-dc", i.filePath)
+		compressionTool = "gzip"
 	default:
 		return nil, errors.New("Unknown file extension: " + fileInfo.Name())
 	}
+
+	stream := compression.NewStreamDecompressor(inStream, compressionTool)
+	return stream, stream.Open()
 }
 
-func commandOutputToPipe(name string, args ...string) (io.ReadCloser, error) {
-	cmd := exec.Command(name, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	go cmd.Run()
-	return stdout, nil
-}
+// func commandOutputToPipe(name string, args ...string) (io.ReadCloser, error) {
+// 	cmd := exec.Command(name, args...)
+// 	stdout, err := cmd.StdoutPipe()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	go cmd.Run()
+// 	return stdout, nil
+// }
 
 func (i *Image) GetPartitionTable() (*disk.PartitionTable, error) {
 	image, err := i.OpenImage()

@@ -105,10 +105,7 @@ func (u *Updater) update(pr progress.Progress) error {
 	if err := compression.CheckFile(*u.conf.CompressionTool, compressedBootPartition.Name()); err != nil {
 		return err
 	}
-	compressedBootPartitionInfo, err := os.Stat(compressedBootPartition.Name())
-	if err != nil {
-		return err
-	}
+
 	localPartitionInfo := u.disk.GetPartitionTable().GetInfo()
 	pr.SetDescription("Partitioning disk if necessary", 21)
 	if err := u.disk.MergePartitionTable(&remotePartitionTable); err != nil {
@@ -137,24 +134,21 @@ func (u *Updater) update(pr progress.Progress) error {
 		return err
 	}
 
-	bootPartitionStream, err := localBootPartition.OpenStream()
-	if err != nil {
+	if _, err = compressedBootPartition.Seek(0, 0); err != nil {
 		return err
 	}
 
-	compressedBootPartition.Seek(0, 0)
-	counter := progress.NewIoCounter(compressedBootPartitionInfo.Size(), progress.NewProgressReporter(pr, 30))
-	compressor := compression.NewStreamDecompressor(bootPartitionStream, io.TeeReader(compressedBootPartition, counter), *u.conf.CompressionTool)
-	if err = compressor.Run(); err != nil {
+	if err = u.writePartition(localBootPartition, compressedBootPartition, progress.NewProgressReporter(pr, 30)); err != nil {
 		return err
 	}
-	compressedBootPartition.Close()
-	os.Remove(compressedBootPartition.Name())
 
-	pr.SetDescription("Syncing disks", 31)
-	if err := u.conf.Runner.RunPath("/bin/sync"); err != nil {
+	if err = compressedBootPartition.Close(); err != nil {
 		return err
 	}
+	if err = os.Remove(compressedBootPartition.Name()); err != nil {
+		return err
+	}
+
 	for i, partition := range remotePartitionTable.Partitions {
 		if i == remoteBootPartition.Index {
 			continue
@@ -163,11 +157,11 @@ func (u *Updater) update(pr progress.Progress) error {
 		if err != nil {
 			return err
 		}
-		localPartitionStream, err := localPartition.OpenStream()
-		if err != nil {
-			return err
-		}
-		defer localPartitionStream.Close()
+		// localPartitionStream, err := localPartition.OpenStream()
+		// if err != nil {
+		// 	return err
+		// }
+		// defer localPartitionStream.Close()
 
 		minPercent := i * 100 / len(remotePartitionTable.Partitions)
 		maxPercent := (i + 1) * 100 / len(remotePartitionTable.Partitions)
@@ -179,12 +173,16 @@ func (u *Updater) update(pr progress.Progress) error {
 		}
 		defer downloadStream.Close()
 
-		partitionSizeBytes := int64(partition.Size * uint32(u.disk.GetPartitionTable().SectorSize))
-		counter = progress.NewIoCounter(partitionSizeBytes, progress.NewProgressReporter(pr, maxPercent))
-		compressor := compression.NewStreamDecompressor(io.MultiWriter(localPartitionStream, counter), downloadStream, *u.conf.CompressionTool)
-		if err := compressor.Run(); err != nil {
+		if err = u.writePartition(localPartition, downloadStream, progress.NewProgressReporter(pr, maxPercent)); err != nil {
 			return err
 		}
+
+		// partitionSizeBytes := int64(partition.Size * uint32(u.disk.GetPartitionTable().SectorSize))
+		// counter := progress.NewIoCounter(partitionSizeBytes, progress.NewProgressReporter(pr, maxPercent))
+		// compressor := compression.NewStreamDecompressor(io.MultiWriter(localPartitionStream, counter), downloadStream, *u.conf.CompressionTool)
+		// if err := compressor.Run(); err != nil {
+		// 	return err
+		// }
 	}
 
 	pr.SetDescription("Syncing disks", 100)
@@ -192,6 +190,28 @@ func (u *Updater) update(pr progress.Progress) error {
 	return u.conf.Runner.RunPath("/bin/sync")
 }
 
+func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.ReadCloser, pr progress.Progress) error {
+	partitionStream, err := partition.OpenStream()
+	if err != nil {
+		return err
+	}
+
+	remoteBootPartitionStream := compression.NewStreamDecompressor(compressedInput, *u.conf.CompressionTool)
+	if err := remoteBootPartitionStream.Open(); err != nil {
+		return err
+	}
+	counter := progress.NewIoCounter(int64(partition.SizeBytes()), pr)
+	if _, err := io.Copy(io.MultiWriter(partitionStream, counter), remoteBootPartitionStream); err != nil {
+		return err
+	}
+	if err = remoteBootPartitionStream.Close(); err != nil {
+		return err
+	}
+	if err := u.conf.Runner.RunPath("/bin/sync"); err != nil {
+		return err
+	}
+	return nil
+}
 func (u *Updater) partitionDownloadUrl(partition *disk.Partition) string {
 	downloadUrlBoot := strings.Replace(server.API_IMAGES_DOWNLOAD, "{id}", *u.conf.Id, 1)
 	downloadUrlBoot = strings.Replace(downloadUrlBoot, "{partitionIndex}", strconv.Itoa(partition.Index), 1)

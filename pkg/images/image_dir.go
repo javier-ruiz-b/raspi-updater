@@ -28,7 +28,7 @@ func (i *ImageDir) FindImage(imageName string) (*Image, error) {
 	}
 
 	if len(matches) != 1 {
-		return nil, fmt.Errorf("There are %d images matching %s", len(matches), strings.Join(matches, " "))
+		return nil, fmt.Errorf("there are %d images matching %s", len(matches), strings.Join(matches, " "))
 	}
 
 	_, err = os.Stat(matches[0])
