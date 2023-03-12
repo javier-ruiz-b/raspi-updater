@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/testdata"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/utils"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
@@ -53,5 +52,5 @@ func (s *Server) Close() {
 
 func (s *Server) Listen() error {
 	log.Print("Listening on ", *s.options.Address)
-	return s.server.ListenAndServeTLS(testdata.GetCertificatePaths())
+	return s.server.ListenAndServeTLS(*s.options.CertificatePath, *s.options.KeyPath)
 }

@@ -30,7 +30,7 @@ func NewUpdater(conf *config.ClientConfig) *Updater {
 }
 
 func (u *Updater) Run() error {
-	u.qc = transport.NewQuicClient(*u.conf.Address, *u.conf.Log)
+	u.qc = transport.NewQuicClient(u.conf)
 	selfupdater := selfupdater.NewSelfUpdater(u.qc, u.conf.Runner)
 
 	log.Print("Checking for client update")

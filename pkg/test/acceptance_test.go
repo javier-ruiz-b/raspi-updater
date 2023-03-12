@@ -17,6 +17,7 @@ import (
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/disk"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/runner"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/server"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/testdata"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,7 +95,7 @@ func TestAcceptance(t *testing.T) {
 	bufferSize := 1024 * 1024
 	result, err := readercomp.Equal(serverStream, clientStream, bufferSize)
 	assert.Nil(t, err)
-	log.Print(clientImage)
+	log.Print("Images: ", serverImage, " ", clientImage)
 	assert.True(t, result, "Disk contents are not equal")
 }
 
@@ -185,6 +186,10 @@ func newClientConfig() *config.ClientConfig {
 	result.Runner = runner.NewFakeRunner()
 	result.CompressionTool = &compressionTool
 
+	cert, key := testdata.GetCertificatePaths()
+	result.CertificatePath = &cert
+	result.KeyPath = &key
+
 	return result
 }
 
@@ -195,6 +200,10 @@ func newServerConfig() *config.ServerConfig {
 	updaterDir := "../testdata/bin"
 	result.ImagesDir = &imagesDir
 	result.UpdaterDir = &updaterDir
+
+	cert, key := testdata.GetCertificatePaths()
+	result.CertificatePath = &cert
+	result.KeyPath = &key
 
 	return result
 }

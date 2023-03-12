@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/javier-ruiz-b/raspi-image-updater/pkg/testdata"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/utils"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
@@ -25,11 +25,11 @@ type QuicClient struct {
 	roundTripper *http3.RoundTripper
 }
 
-func NewQuicClient(address string, qlogs bool) Client {
-	return newClient(newQuicClient(address, qlogs))
+func NewQuicClient(config *config.ClientConfig) Client {
+	return newClient(newQuicClient(*config.Address, *config.Log, *config.CertificatePath))
 }
 
-func newQuicClient(address string, qlogs bool) transportClient {
+func newQuicClient(address string, qlogs bool, certPath string) transportClient {
 	var qconf quic.Config
 	if qlogs {
 		qconf.Tracer = qlog.NewTracer(func(_ logging.Perspective, connID []byte) io.WriteCloser {
@@ -47,7 +47,7 @@ func newQuicClient(address string, qlogs bool) transportClient {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testdata.AddRootCA(pool)
+	addRootCA(pool, certPath)
 
 	roundTripper := &http3.RoundTripper{
 		TLSClientConfig: &tls.Config{
@@ -80,3 +80,22 @@ func (c *QuicClient) Get(url string) (*http.Response, error) {
 	// nlog.Debug("Get ", url)
 	return c.client.Get(url)
 }
+
+// AddRootCA adds the root CA certificate to a cert pool
+func addRootCA(certPool *x509.CertPool, certPath string) error {
+	caCertRaw, err := os.ReadFile(certPath)
+	if err != nil {
+		return err
+	}
+	if ok := certPool.AppendCertsFromPEM(caCertRaw); !ok {
+		return fmt.Errorf("could not add root ceritificate %s to pool.")
+	}
+	return nil
+}
+
+// // GetRootCA returns an x509.CertPool containing (only) the CA certificate
+// func getRootCA() *x509.CertPool {
+// 	pool := x509.NewCertPool()
+// 	addRootCA(pool)
+// 	return pool
+// }
