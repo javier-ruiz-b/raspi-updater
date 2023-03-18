@@ -1,0 +1,11 @@
+Package: raspi-updater
+Version: %version%
+Section: base
+Priority: optional
+Architecture: %arch%
+Depends: initramfs-tools
+Maintainer: Javier Ruiz <...>
+Description: Raspberry Pi updater 
+ This package installs an initramfs hook for the updater. This checks on
+ every boot if a newer image is available and replaces your current system.
+ 

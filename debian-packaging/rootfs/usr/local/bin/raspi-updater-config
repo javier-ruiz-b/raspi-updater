@@ -1,0 +1,74 @@
+#!/bin/bash
+set -euo pipefail
+
+error() {
+    echo "$@"
+    exit 1
+}
+
+CONFIG_DIR=/etc/raspi-updater
+CONFIG_FILE=$CONFIG_DIR/raspi-updater.conf
+if [ -f "$CONFIG_FILE" ]; then
+    . "$CONFIG_FILE"
+else 
+    echo "no previous configuration found.."
+fi
+
+echo "Checking configuration"
+NET_INTERFACE=$(ip route list default | sed -rn 's/.*dev ([^ ]+).*/\1/p')
+if [ "$NET_INTERFACE" = "" ]; then
+    error "No internet interface detected"
+fi
+if ! ip address list "$NET_INTERFACE" | grep 'inet .* dynamic'; then
+    error "Only supporting interfaces configured via DHCPv4"
+fi
+if echo "$NET_INTERFACE" | grep '^wlan' && [ ! -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
+    error "wpa_supplicant.conf not found"
+fi
+
+NET_DRIVER="$(basename "$(readlink "/sys/class/net/$NET_INTERFACE/device/driver/module")")"
+
+while [ "${SERVER:-}" = "" ]; do
+    read -r -p "server address: " SERVER
+    if ping -c "$SERVER" &> /dev/null; then
+        break
+    fi
+done
+
+DEVICE=$(grep ' / ' /proc/mounts  | cut -d ' ' -f1)
+
+while [ "${ID:-}" = "" ]; do
+    read -r -p "ID: " ID
+done
+
+while [ ! -f "${CERT_FILE:-}" ]; do
+    read -r -p "certificate file: " CERT_FILE
+done
+
+while [ ! -f "/bin/${COMPRESSION_TOOL:-}" ]; do
+    read -r -p "compression tool: " COMPRESSION_TOOL
+done
+
+CONFIG_DIR=/etc/raspi-updater
+CONFIG_FILE=$CONFIG_DIR/raspi-updater.conf
+
+echo "writing configuration to $CONFIG_FILE:"
+sudo mkdir -p "$CONFIG_DIR"
+
+cat <<EOF | sudo tee $CONFIG_FILE
+ID=$ID
+NET_INTERFACE=$NET_INTERFACE
+NET_DRIVER=$NET_DRIVER
+SERVER=$SERVER
+CERT_FILE=$CERT_FILE
+DEVICE=$DEVICE
+COMPRESSION_TOOL=$COMPRESSION_TOOL
+EOF
+
+echo ""
+echo "updating initramfs"
+
+sudo update-initramfs -c -k "$(uname -r)"
+sudo mv "/boot/initrd.img-$(uname -r)" /boot/initrd.img
+
+echo "success!"

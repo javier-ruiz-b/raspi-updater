@@ -1,0 +1,46 @@
+#!/bin/sh
+# shellcheck disable=SC1091,SC2015
+set -e
+
+case "${1}" in
+prereqs)
+    exit 0 ;;
+esac
+
+error() {
+    echo "$@"
+    sleep 10
+    exit 0
+}
+
+. /etc/raspi-updater/raspi-updater.conf || error "Could not load raspi-updater.conf"
+
+echo "Waiting for $NET_INTERFACE"
+modprobe "$NET_DRIVER"
+
+for _ in $(seq 1 30); do
+    [ -d "/sys/class/net/$NET_INTERFACE" ] && break
+    printf "."
+    sleep 0.5
+done
+[ -d "/sys/class/net/$NET_INTERFACE" ] || error "$NET_INTERFACE unavailable"
+
+ip link set "$NET_INTERFACE" up
+
+if echo "$NET_INTERFACE" | grep '^wlan'; then
+    echo "Connecting $NET_INTERFACE to WiFi network..."
+    /sbin/wpa_supplicant -W -B -i"$NET_INTERFACE" -c /etc/wpa_supplicant/wpa_supplicant.conf || error "$NET_INTERFACE" connection error
+fi
+
+echo "Configuring $NET_INTERFACE per DHCP"
+busybox udhcpc -i "$NET_INTERFACE" -A 2 -n  || error "No DHCP response over $NET_INTERFACE"
+
+for i in $(seq 1 5); do
+    ping -c1 "$SERVER" && break || true
+    echo "Pinging $SERVER $i / 5"
+done
+
+# TODO: remove this after tests are finished
+DEVICE=/tmp/updater.img
+dd if=/dev/zero of=$DEVICE bs=file_size count=1
+raspi-updater -client -id "$ID" -device "$DEVICE" -compression "$COMPRESSION_TOOL" -address "$SERVER" -certFile "$CERT_FILE" || error "Updater failed"

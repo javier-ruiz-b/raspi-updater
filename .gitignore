@@ -2,3 +2,4 @@ cmd/updater/linux*
 cmd/updater/windows*
 *.exe
 *.qlog
+output/
