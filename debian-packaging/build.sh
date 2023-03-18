@@ -11,7 +11,13 @@ rm -rf "${output_dir:?}/"*
 tmpdir=$(mktemp -d)
 trap 'rm -rf $tmpdir' EXIT
 
-for arch in amd64; do # TODO: armhf arm64
+archs=(amd64 armhf arm64)
+
+if [ "$*" != "" ]; then
+    archs=("$@")
+fi
+
+for arch in "${archs[@]}"; do # TODO: armhf arm64
     package_name="raspi-updater_${VERSION}_${arch}"
     package_dir="$tmpdir/${package_name}"
     mkdir "$package_dir"
@@ -35,7 +41,7 @@ for arch in amd64; do # TODO: armhf arm64
              "$package_dir/usr/local/bin"/*
     sed -i "s/%version%/$VERSION/g" "$package_dir/DEBIAN/control"
     sed -i "s/%arch%/$arch/g" "$package_dir/DEBIAN/control"
-    dpkg-deb -Zgzip --build --root-owner-group "$package_name"
+    dpkg-deb -Znone --build --root-owner-group "$package_name"
     mv *.deb "$output_dir"
     rm -rf "${tmpdir:?}/"*
     cd -

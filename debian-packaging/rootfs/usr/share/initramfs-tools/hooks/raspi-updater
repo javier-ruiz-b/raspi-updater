@@ -18,14 +18,15 @@ cp -p "/etc/raspi-updater/raspi-updater.conf" "$DESTDIR/etc/raspi-updater"
 
 # For DNS resolving
 cp -p /etc/resolv.conf "$DESTDIR/etc"
-cat <<EOF > "$DESTDIR/etc/nsswitch.conf"
-hosts:      files dns
-EOF
+cp -p /etc/nsswitch.conf "$DESTDIR/etc"
+
+# In case busybox did not create symlinks...
+ln -sf "/bin/busybox" "$DESTDIR/bin/partprobe"
 
 . "/etc/raspi-updater/raspi-updater.conf"
 
 mkdir -p "$DESTDIR/usr/bin"
-copy_exec /usr/share/raspi-updater/raspi-updater      /usr/bin
+copy_exec /usr/share/raspi-updater/raspi-updater      /usr/bin/client-raspi-updater
 
 copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin
 

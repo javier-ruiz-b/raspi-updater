@@ -15,18 +15,21 @@ else
 fi
 
 echo "Checking configuration"
-NET_INTERFACE=$(ip route list default | sed -rn 's/.*dev ([^ ]+).*/\1/p')
+NET_INTERFACE=$(busybox ip route list default | grep '^default' | sed -rn 's/.*dev ([^ ]+).*/\1/p')
 if [ "$NET_INTERFACE" = "" ]; then
     error "No internet interface detected"
 fi
-if ! ip address list "$NET_INTERFACE" | grep 'inet .* dynamic'; then
-    error "Only supporting interfaces configured via DHCPv4"
+if ! busybox ip address list "$NET_INTERFACE" | grep 'inet .* dynamic'; then
+    echo "Warning: Only supporting interfaces configured via DHCPv4"
 fi
+
 if echo "$NET_INTERFACE" | grep '^wlan' && [ ! -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
     error "wpa_supplicant.conf not found"
 fi
 
-NET_DRIVER="$(basename "$(readlink "/sys/class/net/$NET_INTERFACE/device/driver/module")")"
+if [ "${NET_DRIVER:-}" = "" ]; then
+    NET_DRIVER="$(basename "$(readlink "/sys/class/net/$NET_INTERFACE/device/driver/module")")"
+fi
 
 while [ "${SERVER:-}" = "" ]; do
     read -r -p "server address: " SERVER
@@ -35,7 +38,9 @@ while [ "${SERVER:-}" = "" ]; do
     fi
 done
 
-DEVICE=$(grep ' / ' /proc/mounts  | cut -d ' ' -f1)
+if [ "${DEVICE:-}" = "" ]; then
+    DEVICE=$(grep ' / ' /proc/mounts  | cut -d ' ' -f1)
+fi
 
 while [ "${ID:-}" = "" ]; do
     read -r -p "ID: " ID
@@ -68,7 +73,10 @@ EOF
 echo ""
 echo "updating initramfs"
 
-sudo update-initramfs -c -k "$(uname -r)"
-sudo mv "/boot/initrd.img-$(uname -r)" /boot/initrd.img
-
+sudo update-initramfs -u
+if arch | grep '^arm'; then
+    sudo cp -f "/boot/initrd.img-$(uname -r)" /boot/initrd.img
+    echo TODO: ensure in config.txt
+    exit 1
+fi
 echo "success!"

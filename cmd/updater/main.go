@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -17,7 +16,6 @@ import (
 
 func main() {
 	fmt.Println("Updater version ", version.VERSION)
-	flag.Bool("client", false, "Run as client")
 
 	go signalCatcher()
 

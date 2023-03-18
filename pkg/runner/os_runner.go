@@ -13,8 +13,9 @@ func (o *OsRunner) RunPath(filePath string, args ...string) error {
 	cmd := exec.Command(filePath, args...)
 	err := cmd.Run()
 	if err != nil {
-		errExit := err.(*exec.ExitError)
-		return fmt.Errorf("process %s ended with exit code %d. Output: %s", filePath, errExit.ExitCode(), errExit.Stderr)
+		if errExit, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("process %s ended with exit code %d. Output: %s", filePath, errExit.ExitCode(), errExit.Stderr)
+		}
 	}
 	return err
 }

@@ -17,12 +17,14 @@ type ClientConfig struct {
 func NewClientConfig() *ClientConfig {
 	defaultId := ""
 	defaultDisk := "/dev/mmcblk0"
+	defaultCompressionTool := "gzip"
 
 	result := &ClientConfig{
-		Config:     NewConfig(),
-		Id:         &defaultId,
-		DiskDevice: &defaultDisk,
-		Runner:     &runner.OsRunner{},
+		Config:          NewConfig(),
+		Id:              &defaultId,
+		DiskDevice:      &defaultDisk,
+		CompressionTool: &defaultCompressionTool,
+		Runner:          &runner.OsRunner{},
 	}
 
 	return result
