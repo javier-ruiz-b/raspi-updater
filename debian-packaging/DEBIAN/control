@@ -3,7 +3,7 @@ Version: %version%
 Section: base
 Priority: optional
 Architecture: %arch%
-Depends: initramfs-tools
+Depends: initramfs-tools,udhcpc
 Maintainer: Javier Ruiz <...>
 Description: Raspberry Pi updater 
  This package installs an initramfs hook for the updater. This checks on
