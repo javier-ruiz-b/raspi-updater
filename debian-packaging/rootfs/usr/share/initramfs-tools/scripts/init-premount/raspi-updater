@@ -32,15 +32,22 @@ if echo "$NET_INTERFACE" | grep '^wlan'; then
     /sbin/wpa_supplicant -W -B -i"$NET_INTERFACE" -c /etc/wpa_supplicant/wpa_supplicant.conf || error "$NET_INTERFACE" connection error
 fi
 
+ip link list "$NET_INTERFACE"
+
 echo "Configuring $NET_INTERFACE per DHCP"
 busybox udhcpc -i "$NET_INTERFACE" -A 2 -n  || error "No DHCP response over $NET_INTERFACE"
+
+ip address list "$NET_INTERFACE"
 
 for i in $(seq 1 5); do
     ping -c1 "$SERVER" && break || true
     echo "Pinging $SERVER $i / 5"
+    sleep 1
 done
 
 # TODO: remove this after tests are finished
 DEVICE=/tmp/updater.img
-dd if=/dev/zero of=$DEVICE bs=file_size count=1
+dd if=/dev/zero of="$DEVICE" bs=$((64*1024*1024)) count=1
 raspi-updater -client -id "$ID" -device "$DEVICE" -compression "$COMPRESSION_TOOL" -address "$SERVER" -certFile "$CERT_FILE" || error "Updater failed"
+
+sleep 10
