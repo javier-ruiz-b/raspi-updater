@@ -16,6 +16,10 @@ esac
 mkdir -p "$DESTDIR/etc/raspi-updater"
 cp -p "/etc/raspi-updater/raspi-updater.conf" "$DESTDIR/etc/raspi-updater"
 
+# for setting IP from DHCP client (requires udhcpc)
+mkdir -p "$DESTDIR/etc/udhcpc"
+cp -p "/etc/udhcpc/default.script" "$DESTDIR/etc/udhcpc"
+
 # For DNS resolving
 cp -p /etc/resolv.conf "$DESTDIR/etc"
 cp -p /etc/nsswitch.conf "$DESTDIR/etc"

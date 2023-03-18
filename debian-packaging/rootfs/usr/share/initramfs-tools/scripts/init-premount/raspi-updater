@@ -9,10 +9,11 @@ esac
 
 error() {
     echo "$@"
-    sleep 10
+    exec /bin/sh
     exit 0
 }
 
+. /scripts/functions
 . /etc/raspi-updater/raspi-updater.conf || error "Could not load raspi-updater.conf"
 
 if [ -f /.dockerenv ]; then
@@ -40,12 +41,6 @@ else
     busybox udhcpc -i "$NET_INTERFACE" -A 2 -n  || error "No DHCP response over $NET_INTERFACE."
 
     ip address list "$NET_INTERFACE"
-
-    for i in $(seq 1 5); do
-        ping -c1 "$SERVER" && break || true
-        echo "Pinging $SERVER $i / 5"
-        sleep 1
-    done
 fi
 
 client-raspi-updater \
@@ -56,4 +51,4 @@ client-raspi-updater \
     -certFile "$CERT_FILE" || error "Updater failed"
 
 echo "Success!"
-sleep 1
+sleep 10
