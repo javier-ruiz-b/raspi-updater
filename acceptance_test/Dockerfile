@@ -9,16 +9,15 @@ RUN apt-get update && \
         grep \
         gzip \
         initramfs-tools \
+        linux-image-amd64 \
         lz4 \
         sed \
         sudo \
+        udhcpc \
         zstd 
 
 RUN sed -i 's/COMPRESS=.*/COMPRESS=lz4/g'  /etc/initramfs-tools/initramfs.conf \
     && echo "COMPRESSLEVEL=0" >> /etc/initramfs-tools/initramfs.conf 
-
-RUN apt-get install -y \
-        linux-image-amd64 
 
 # Set the user to the current user
 ARG USER_ID

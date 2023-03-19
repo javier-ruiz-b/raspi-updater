@@ -3,3 +3,4 @@ cmd/updater/windows*
 *.exe
 *.qlog
 output/
+backup/
