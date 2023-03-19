@@ -46,7 +46,7 @@ if echo "$NET_INTERFACE" | grep '^wlan'; then
         "$DESTDIR/etc/wpa_supplicant" \
         "$DESTDIR/usr/lib/firmware"
 
-    cp -rp "$DESTDIR/usr/lib/firmware/brcm"  "$DESTDIR/usr/lib/firmware"
+    cp -rp "/usr/lib/firmware/brcm"  "$DESTDIR/usr/lib/firmware"
         
     copy_exec /usr/sbin/wpa_supplicant    /usr/sbin
     cp -p "/etc/wpa_supplicant/wpa_supplicant.conf" "$DESTDIR/etc/wpa_supplicant"
