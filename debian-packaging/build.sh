@@ -27,13 +27,12 @@ for arch in "${archs[@]}"; do # TODO: armhf arm64
     output_bin="$package_dir/usr/share/raspi-updater/raspi-updater"
     case $arch in
     amd64)
-        GOOS=linux GOARCH=amd64 go build -o "$output_bin" ../cmd/updater/*.go ;;
+        GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o "$output_bin" ../cmd/updater/*.go ;;
     armhf)
-        GOOS=linux GOARCH=arm GOARM=6 go build -o "$output_bin" ../cmd/updater/*.go ;;
+        GOOS=linux GOARCH=arm GOARM=6 go build -ldflags "-s -w" -o "$output_bin" ../cmd/updater/*.go ;;
     arm64)
-        GOOS=linux GOARCH=arm64 go build -o "$output_bin" ../cmd/updater/*.go ;; 
+        GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o "$output_bin" ../cmd/updater/*.go ;; 
     esac
-    strip "$output_bin"
     
     cd "$tmpdir"
     chmod +x "$package_dir/usr/share/initramfs-tools/hooks"/* \
