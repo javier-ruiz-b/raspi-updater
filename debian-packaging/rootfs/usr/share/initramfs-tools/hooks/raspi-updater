@@ -30,8 +30,10 @@ ln -sf "/bin/busybox" "$DESTDIR/bin/partprobe"
 . "/etc/raspi-updater/raspi-updater.conf"
 
 mkdir -p "$DESTDIR/usr/bin"
-copy_exec /usr/share/raspi-updater/raspi-updater      /usr/bin/client-raspi-updater
+cp -p /usr/share/raspi-updater/raspi-updater-initramfs-script /usr/bin/
+chmod +x "$DESTDIR/usr/bin/raspi-updater-initramfs-script"
 
+copy_exec /usr/share/raspi-updater/raspi-updater      /usr/bin/client-raspi-updater
 copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin
 
 cert_file_dir="$DESTDIR/$(dirname "$CERT_FILE")"

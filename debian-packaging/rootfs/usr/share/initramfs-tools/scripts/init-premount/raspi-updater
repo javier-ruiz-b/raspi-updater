@@ -7,48 +7,4 @@ prereqs)
     exit 0 ;;
 esac
 
-error() {
-    echo "$@"
-    exec /bin/sh
-    exit 0
-}
-
-. /scripts/functions
-. /etc/raspi-updater/raspi-updater.conf || error "Could not load raspi-updater.conf"
-
-if [ -f /.dockerenv ]; then
-    echo "Docker acceptance test. Skipping network configuration"
-else
-    echo "Waiting for $NET_INTERFACE"
-    modprobe -qb "$NET_DRIVER" || error "Could not load $NET_DRIVER"
-
-    for _ in $(seq 1 10); do
-        [ -d "/sys/class/net/$NET_INTERFACE" ] && break
-        printf "."
-        sleep 0.5
-    done
-
-    ip link set "$NET_INTERFACE" up
-
-    if echo "$NET_INTERFACE" | grep '^wlan'; then
-        echo "Connecting $NET_INTERFACE to WiFi network..."
-        /sbin/wpa_supplicant -W -B -i"$NET_INTERFACE" -c /etc/wpa_supplicant/wpa_supplicant.conf || error "$NET_INTERFACE" connection error
-    fi
-
-    ip link list "$NET_INTERFACE"
-
-    echo "Configuring $NET_INTERFACE per DHCP"
-    busybox udhcpc -i "$NET_INTERFACE" -A 2 -n  || error "No DHCP response over $NET_INTERFACE."
-
-    ip address list "$NET_INTERFACE"
-fi
-
-client-raspi-updater \
-    -id "$ID" \
-    -disk "$DEVICE" \
-    -compression "$COMPRESSION_TOOL" \
-    -address "$SERVER" \
-    -certFile "$CERT_FILE" || error "Updater failed"
-
-echo "Success!"
-sleep 10
+/usr/bin/raspi-updater-initramfs-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.
