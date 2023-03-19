@@ -7,4 +7,4 @@ prereqs)
     exit 0 ;;
 esac
 
-/usr/bin/raspi-updater-initramfs-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.
+/usr/bin/raspi-updater-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.

@@ -30,8 +30,8 @@ ln -sf "/bin/busybox" "$DESTDIR/bin/partprobe"
 . "/etc/raspi-updater/raspi-updater.conf"
 
 mkdir -p "$DESTDIR/usr/bin"
-cp -p /usr/share/raspi-updater/raspi-updater-initramfs-script /usr/bin/
-chmod +x "$DESTDIR/usr/bin/raspi-updater-initramfs-script"
+cp -p /usr/share/raspi-updater/initramfs-script "$DESTDIR/usr/bin/raspi-updater-script"
+chmod +x "$DESTDIR/usr/bin/raspi-updater-script"
 
 copy_exec /usr/share/raspi-updater/raspi-updater      /usr/bin/client-raspi-updater
 copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin

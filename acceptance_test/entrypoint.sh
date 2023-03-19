@@ -30,13 +30,22 @@ EOF
 
 raspi-updater-config  # update configuration
 
-/usr/share/raspi-updater/raspi-updater \
-    -address "$SERVER" \
-    -certFile "$src_dir/pkg/testdata/cert.pem" \
-    -keyFile "$src_dir/pkg/testdata/priv.key" \
-    -images "$src_dir/test/images" \
-    -updater "$src_dir/pkg/testdata/bin" \
-    -verbose &
+[ -f /usr/share/raspi-updater/raspi-updater ] || (
+    echo raspi-updater not found
+    exit 1
+)
+
+(   
+    /usr/share/raspi-updater/raspi-updater \
+        -address "$SERVER" \
+        -certFile "$src_dir/pkg/testdata/cert.pem" \
+        -keyFile "$src_dir/pkg/testdata/priv.key" \
+        -images "$src_dir/test/images" \
+        -updater "$src_dir/pkg/testdata/bin" \
+        -verbose 
+    echo "raspi-updater terminated"
+)   &
+    
 pid_server=$!
 trap 'kill $pid_server' EXIT
 
