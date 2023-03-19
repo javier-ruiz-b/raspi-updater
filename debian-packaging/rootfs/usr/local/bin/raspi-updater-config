@@ -74,9 +74,17 @@ echo ""
 echo "updating initramfs"
 
 sudo update-initramfs -u
-if arch | grep '^arm'; then
-    sudo cp -f "/boot/initrd.img-$(uname -r)" /boot/initrd.img
-    echo TODO: ensure in config.txt
-    exit 1
+if dpkg --print-architecture | grep '^arm'; then
+    ramdisk="/boot/initrd.img-$(uname -r)"
+    if [ ! -f "$ramdisk" ]; then
+        echo "$ramdisk not found"
+        exit 1
+    fi
+
+    if grep '^initramfs ' /boot/config.txt; then
+        sudo sed -i "s/^initramfs .*/initramfs $(basename "$ramdisk")/g" /boot/config.txt
+    else
+        echo "initramfs $(basename "$ramdisk")" | sudo tee /boot/config.txt
+    fi
 fi
 echo "success!"

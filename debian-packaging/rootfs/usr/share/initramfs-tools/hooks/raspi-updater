@@ -38,11 +38,17 @@ cert_file_dir="$DESTDIR/$(dirname "$CERT_FILE")"
 mkdir -p "$cert_file_dir"
 cp -p "$CERT_FILE" "$cert_file_dir"
 
-# add net driver
-manual_add_modules "$NET_DRIVER"
 
 if echo "$NET_INTERFACE" | grep '^wlan'; then
-    mkdir -p "$DESTDIR/usr/sbin" "$DESTDIR/etc/wpa_supplicant"
+    mkdir -p "$DESTDIR/usr/sbin" \
+        "$DESTDIR/etc/wpa_supplicant" \
+        "$DESTDIR/usr/lib/firmware"
+
+    cp -rp "$DESTDIR/usr/lib/firmware/brcm"  "$DESTDIR/usr/lib/firmware"
+        
     copy_exec /usr/sbin/wpa_supplicant    /usr/sbin
     cp -p "/etc/wpa_supplicant/wpa_supplicant.conf" "$DESTDIR/etc/wpa_supplicant"
 fi
+
+# add net driver
+manual_add_modules "$NET_DRIVER"

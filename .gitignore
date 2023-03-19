@@ -4,3 +4,4 @@ cmd/updater/windows*
 *.qlog
 output/
 backup/
+server_images/
