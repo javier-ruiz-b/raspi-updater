@@ -2,10 +2,12 @@ package server
 
 import (
 	"encoding/gob"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
@@ -89,23 +91,44 @@ func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (
 	}
 	defer compressor.Close()
 
-	// w.WriteHeader(http.StatusOK)
-
 	if _, err = io.Copy(w, compressor); err != nil {
 		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
-	// if err = compressor.Run(); err != nil {
-	// 	return http.StatusInternalServerError, []byte(err.Error())
-	// }
+	return http.StatusOK, nil
+}
 
-	// w.WriteHeader(http.StatusOK)
+func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (int, []byte) {
+	// Check if the request method is POST
+	if r.Method != http.MethodPost {
+		return http.StatusMethodNotAllowed, []byte("Method not allowed")
+	}
 
-	// size := int64(partition.Size) * int64(partitionTable.SectorSize)
-	// compressor := compression.NewStreamCompressorN(w, stream, size, compressionBinary)
-	// if err = compressor.Run(); err != nil {
-	// 	return http.StatusInternalServerError, []byte(err.Error())
-	// }
+	// Get the uploaded file from the request body
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		return http.StatusBadRequest, []byte("Failed to get file")
+	}
+	defer file.Close()
+
+	imageName := mux.Vars(r)["id"]
+	compressionBinary := mux.Vars(r)["compression"]
+	if imageName == "" || compressionBinary == "" {
+		return http.StatusBadRequest, []byte("Missing parameters")
+	}
+
+	fileName := imageName + "_" + time.Now().Format("2006-01-02_15-04-05") + ".img." + compressionBinary
+	outFile, err := hc.imageDir.CreateBackup(fileName)
+	if err != nil {
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to create %s", fileName))
+	}
+	defer outFile.Close()
+
+	// Copy the file data to the output file
+	_, err = io.Copy(outFile, file)
+	if err != nil {
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to copy %s", fileName))
+	}
 
 	return http.StatusOK, nil
 }

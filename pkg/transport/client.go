@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 
@@ -19,13 +20,14 @@ type Client interface {
 	GetObject(url string, object any) error
 	DownloadFile(filepath string, url string) error
 	GetDownloadStream(url string) (io.ReadCloser, int64, error)
+	UploadStream(url string, stream io.Reader) error
 }
 
 type ClientStruct struct {
-	tc transportClient
+	tc *QuicClient
 }
 
-func newClient(client transportClient) Client {
+func newClient(client *QuicClient) Client {
 	return &ClientStruct{tc: client}
 }
 
@@ -100,4 +102,55 @@ func (c *ClientStruct) GetDownloadStream(url string) (io.ReadCloser, int64, erro
 	}
 
 	return response.Body, response.ContentLength, nil
+}
+
+func (c *ClientStruct) UploadStream(url string, stream io.Reader) error {
+	body, writer := io.Pipe()
+	request, err := c.tc.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+
+	mwriter := multipart.NewWriter(writer)
+
+	request.Header.Add("Content-Type", mwriter.FormDataContentType())
+
+	errChan := make(chan error, 1)
+	go func() {
+		defer mwriter.Close()
+		// Create a new form file field
+		fileField, err := mwriter.CreateFormFile("file", "file")
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		if _, err = io.Copy(fileField, stream); err != nil {
+			errChan <- err
+			return
+		}
+
+		if err := mwriter.Close(); err != nil {
+			errChan <- err
+			return
+		}
+		errChan <- nil
+	}()
+
+	// Send the HTTP request and get the response
+	response, err := c.tc.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	// Check the response status code for success
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("error uploading stream %s, unexpected status code: %d", url, response.StatusCode)
+	}
+	if err := <-errChan; err != nil {
+		return err
+	}
+
+	return err
 }

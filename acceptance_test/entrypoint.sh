@@ -38,6 +38,7 @@ raspi-updater-config  # update configuration
     -updater "$src_dir/pkg/testdata/bin" \
     -verbose &
 pid_server=$!
+trap 'kill $pid_server' EXIT
 
 sleep 1
 

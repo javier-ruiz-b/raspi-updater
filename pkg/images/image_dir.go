@@ -40,3 +40,12 @@ func (i *ImageDir) FindImage(imageName string) (*Image, error) {
 		filePath: matches[0],
 	}, nil
 }
+
+func (i *ImageDir) CreateBackup(fileName string) (*os.File, error) {
+	backupDir := i.imagesDir + "/backup"
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return nil, err
+	}
+
+	return os.Create(backupDir + "/" + fileName)
+}

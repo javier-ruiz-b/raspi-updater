@@ -13,6 +13,7 @@ import (
 	"github.com/diskfs/go-diskfs/partition/mbr"
 	"github.com/hlubek/readercomp"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/client"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/config"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/disk"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/runner"
@@ -97,6 +98,26 @@ func TestAcceptance(t *testing.T) {
 	assert.Nil(t, err)
 	log.Print("Images: ", serverImage, " ", clientImage)
 	assert.True(t, result, "Disk contents are not equal")
+
+	//check backup
+	matches, err := filepath.Glob(tempDir + "/backup/*.img*")
+	assert.Nil(t, err)
+	assert.Equal(t, len(matches), 1)
+	expectedImage := tempDir + "/expected.img"
+	createEmptyImage(expectedImage, 64*1024*1024)
+	expected, err := os.Open(expectedImage)
+	assert.Nil(t, err)
+	defer expected.Close()
+
+	compressedBackup, err := os.Open(matches[0])
+	assert.Nil(t, err)
+	decompressedBackup := compression.NewStreamDecompressor(compressedBackup, *clientConfig.CompressionTool)
+	err = decompressedBackup.Open()
+	assert.Nil(t, err)
+
+	equal, err := readercomp.Equal(decompressedBackup, expected, bufferSize)
+	assert.Nil(t, err)
+	assert.True(t, equal)
 }
 
 func createEmptyImage(imageFile string, size int64) error {

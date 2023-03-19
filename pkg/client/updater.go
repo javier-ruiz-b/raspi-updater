@@ -104,8 +104,13 @@ func (u *Updater) update() error {
 		return err
 	}
 
-	fmt.Print("Checking downloaded boot partition")
+	log.Print("Checking downloaded boot partition")
 	if err := compression.CheckFile(*u.conf.CompressionTool, compressedBootPartition.Name()); err != nil {
+		return err
+	}
+
+	log.Print("Backing up disk")
+	if err := u.backupDisk(); err != nil {
 		return err
 	}
 
@@ -165,6 +170,33 @@ func (u *Updater) update() error {
 	}
 
 	return nil
+}
+
+func (u *Updater) backupDisk() error {
+	disk, err := os.Open(*u.conf.DiskDevice)
+	if err != nil {
+		return err
+	}
+	defer disk.Close()
+
+	diskStat, err := disk.Stat()
+	if err != nil {
+		return err
+	}
+
+	diskBarReader := progressbar.DefaultBytes(diskStat.Size(), "Uploading "+*u.conf.DiskDevice)
+	defer diskBarReader.Close()
+
+	diskCompressionStream := compression.NewStreamCompressor(io.TeeReader(disk, diskBarReader), *u.conf.CompressionTool)
+	if err := diskCompressionStream.Open(); err != nil {
+		return err
+	}
+	defer diskCompressionStream.Close()
+
+	backupUrl := strings.Replace(server.API_IMAGES_BACKUP, "{id}", *u.conf.Id, 1)
+	backupUrl = strings.Replace(backupUrl, "{compression}", *u.conf.CompressionTool, 1)
+
+	return u.qc.UploadStream(backupUrl, diskCompressionStream)
 }
 
 func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.ReadCloser, progressText string) error {
