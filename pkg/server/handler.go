@@ -21,12 +21,15 @@ type HandlerConfig struct {
 	imageDir    *images.ImageDir
 }
 
+var verbose = false
+
 func newMainHandler(options *config.ServerConfig) http.Handler {
 	serveMux := mux.NewRouter()
 	hc := &HandlerConfig{
 		binariesDir: *options.UpdaterDir,
 		imageDir:    images.NewImageDir(*options.ImagesDir),
 	}
+	verbose = *options.Verbose
 
 	serveMux.Handle(API_VERSION, newPathHandler(hc.versionHandler))
 	serveMux.Handle(API_UPDATE, newPathHandler(hc.updateHandler))
@@ -49,10 +52,16 @@ func newPathHandler(handleFunc func(w http.ResponseWriter, r *http.Request) (int
 }
 
 func (p *PathHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if verbose {
+		log.Printf("%s: %s %s Request\n", r.Host, r.Method, r.URL)
+	}
+
 	statusCode, response := p.handleFunc(w, r)
 
 	if statusCode != http.StatusOK {
-		log.Printf("[%d] %s\n", statusCode, string(response))
+		log.Printf("%s: %s %s Error [%d] %s\n", r.Host, r.Method, r.URL, statusCode, string(response))
+	} else if verbose {
+		log.Printf("%s: %s %s OK\n", r.Host, r.Method, r.URL)
 	}
 
 	w.WriteHeader(statusCode)
