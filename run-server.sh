@@ -13,8 +13,8 @@ cd "cmd/updater"
 GOOS=windows GOARCH=amd64 go build -race -o windows-amd64 
 ./windows-amd64 \
     -address "0.0.0.0:31416" \
-    -certFile "$src_dir/pkg/testdata/cert.pem" \
-    -keyFile "$src_dir/pkg/testdata/priv.key" \
+    -certFile "$src_dir/server_images/local/lange.fritz.box.crt" \
+    -keyFile "$src_dir/server_images/local/lange.fritz.box.key" \
     -images "$src_dir/server_images" \
     -updater "$src_dir/cmd/updater" \
     -verbose \
