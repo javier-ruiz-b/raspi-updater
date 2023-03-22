@@ -84,7 +84,7 @@ if dpkg --print-architecture | grep '^arm'; then
     if grep '^initramfs ' /boot/config.txt; then
         sudo sed -i "s/^initramfs .*/initramfs $(basename "$ramdisk")/g" /boot/config.txt
     else
-        echo "initramfs $(basename "$ramdisk")" | sudo tee /boot/config.txt
+        echo "initramfs $(basename "$ramdisk")" | sudo tee -a /boot/config.txt
     fi
 fi
 echo "success!"
