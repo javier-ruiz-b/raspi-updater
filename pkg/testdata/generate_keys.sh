@@ -15,7 +15,7 @@ openssl req -out "$hostname".csr -new -newkey rsa:4096 -nodes -keyout "$hostname
 echo "Sign certificate:"
 openssl x509 -req -sha256 -days 3650 -in "$hostname".csr  -out "$hostname".crt \
   -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -extfile <(printf "subjectAltName=DNS:localhost")
+  -extfile <(printf "subjectAltName=DNS:%s" "$hostname")
 
 # debug output the certificate
 openssl x509 -noout -text -in "$hostname".crt

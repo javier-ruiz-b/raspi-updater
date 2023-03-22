@@ -49,7 +49,14 @@ if echo "$NET_INTERFACE" | grep '^wlan'; then
     cp -rp "/usr/lib/firmware/brcm"  "$DESTDIR/usr/lib/firmware"
         
     copy_exec /usr/sbin/wpa_supplicant    /usr/sbin
-    cp -p "/etc/wpa_supplicant/wpa_supplicant.conf" "$DESTDIR/etc/wpa_supplicant"
+    # cp -p "/etc/wpa_supplicant/wpa_supplicant.conf" "$DESTDIR/etc/wpa_supplicant"
+    sed '/^ctrl_interface.*/d' /etc/wpa_supplicant/wpa_supplicant.conf \
+        > "$DESTDIR/etc/wpa_supplicant/wpa_supplicant.conf"
+    
+    # wpa_supplicant expects /var/run
+    mkdir -p "$DESTDIR/var"
+    ln -sf /run "$DESTDIR/var/run"
+    # cp -p "/etc/group" "/etc/passwd"  "$DESTDIR/etc"
 fi
 
 # add net driver
