@@ -15,7 +15,7 @@ else
 fi
 
 echo "Checking configuration"
-NET_INTERFACE=$(busybox ip route list default | grep '^default' | sed -rn 's/.*dev ([^ ]+).*/\1/p')
+NET_INTERFACE=$(busybox ip route list default | grep '^default' | sed -rn 's/.*dev ([^ ]+).*/\1/p' | sort | head -n1)
 if [ "$NET_INTERFACE" = "" ]; then
     error "No internet interface detected"
 fi
