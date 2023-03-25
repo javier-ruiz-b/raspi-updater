@@ -17,8 +17,8 @@ client_time="$(busybox date +%s -r "$CERT_FILE")"
 system_time="$(busybox date +%s)"
 
 if [ "$client_time" -gt "$system_time" ]; then
-    busybox date +%s -s @"$client_time"
     echo "Setting time to $(busybox date)"
+    busybox date +%s -s @"$client_time" >/dev/null
 fi
 
 if [ -f /.dockerenv ]; then
@@ -43,7 +43,7 @@ else
     ip link list "$NET_INTERFACE"
 
     echo "Configuring $NET_INTERFACE per DHCP"
-    busybox udhcpc -i "$NET_INTERFACE" -A 2 -n  || error "No DHCP response over $NET_INTERFACE."
+    busybox udhcpc -i "$NET_INTERFACE" -A 1 -t 5 -n  || error "No DHCP response over $NET_INTERFACE."
 
     ip address list "$NET_INTERFACE"
 fi

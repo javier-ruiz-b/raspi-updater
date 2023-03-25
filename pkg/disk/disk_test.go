@@ -159,6 +159,26 @@ func TestReadsVersion(t *testing.T) {
 	assert.Equal(t, "1.2.3.4", version)
 }
 
+func TestWritesAndReadsVersion(t *testing.T) {
+	disk, err := diskfs.Open(imageFile)
+	assert.Nil(t, err)
+	fspec := diskfsdisk.FilesystemSpec{Partition: 1, FSType: filesystem.TypeFat32, VolumeLabel: "boot"}
+	_, err = disk.CreateFilesystem(fspec)
+	assert.Nil(t, err)
+	disk.File.Close()
+
+	tested := NewDisk(imageFile)
+	err = tested.Read()
+	assert.Nil(t, err)
+	err = tested.WriteVersion("1.0")
+	assert.Nil(t, err)
+
+	version, err := tested.ReadVersion()
+
+	assert.Nil(t, err)
+	assert.Equal(t, "1.0", version)
+}
+
 func TestWritesToAndReadsFromPartition(t *testing.T) {
 	tested := NewDisk(imageFile)
 	err := tested.Read()

@@ -108,22 +108,24 @@ func (u *Updater) update() error {
 	if err := compression.CheckFile(*u.conf.CompressionTool, compressedBootPartition.Name()); err != nil {
 		return err
 	}
+	localPartitionInfo := u.disk.GetPartitionTable().GetInfo()
 
 	log.Print("Backing up disk")
-	if err := u.backupDisk(); err != nil {
+	if err := u.backupDisk(u.backupBytes(u.disk.GetPartitionTable(), &remotePartitionTable)); err != nil {
 		return err
 	}
 
-	localPartitionInfo := u.disk.GetPartitionTable().GetInfo()
-	log.Print("Partitioning disk if necessary")
+	log.Print("Merging partition table")
 	if err := u.disk.MergePartitionTable(&remotePartitionTable); err != nil {
 		return err
 	}
+	mergedPartitionTable := u.disk.GetPartitionTable()
 
 	log.Printf("Partition table:\nLocal: %s\nRemote: %s\nFinal: %s",
 		localPartitionInfo,
 		remotePartitionTable.GetInfo(),
-		u.disk.GetPartitionTable().GetInfo())
+		mergedPartitionTable.GetInfo())
+	log.Print("Writing partition table")
 	if err := u.disk.Write(); err != nil {
 		return err
 	}
@@ -174,22 +176,17 @@ func (u *Updater) update() error {
 	return nil
 }
 
-func (u *Updater) backupDisk() error {
+func (u *Updater) backupDisk(backupDiskLength int64) error {
 	disk, err := os.Open(*u.conf.DiskDevice)
 	if err != nil {
 		return err
 	}
 	defer disk.Close()
 
-	diskStat, err := disk.Stat()
-	if err != nil {
-		return err
-	}
-
-	diskBarReader := progressbar.DefaultBytes(diskStat.Size(), "Uploading "+*u.conf.DiskDevice)
+	diskBarReader := progressbar.DefaultBytes(backupDiskLength, "Backup "+*u.conf.DiskDevice)
 	defer diskBarReader.Close()
 
-	diskCompressionStream := compression.NewStreamCompressor(io.TeeReader(disk, diskBarReader), *u.conf.CompressionTool)
+	diskCompressionStream := compression.NewStreamCompressorN(io.TeeReader(disk, diskBarReader), backupDiskLength, *u.conf.CompressionTool)
 	if err := diskCompressionStream.Open(); err != nil {
 		return err
 	}
@@ -199,6 +196,17 @@ func (u *Updater) backupDisk() error {
 	backupUrl = strings.Replace(backupUrl, "{compression}", *u.conf.CompressionTool, 1)
 
 	return u.qc.UploadStream(backupUrl, diskCompressionStream)
+}
+
+func (u *Updater) backupBytes(localPartitionTable, remotePartitionTable *disk.PartitionTable) int64 {
+	lastRemotePartition := remotePartitionTable.Partitions[len(remotePartitionTable.Partitions)-1]
+	lastRemoteSector := lastRemotePartition.EndSector()
+	for _, localPartition := range localPartitionTable.Partitions {
+		if localPartition.EndSector() > lastRemoteSector {
+			return int64(localPartition.EndSector()) * int64(localPartitionTable.SectorSize)
+		}
+	}
+	return int64(localPartitionTable.Size)
 }
 
 func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.ReadCloser, progressText string) error {

@@ -8,8 +8,8 @@ import (
 
 type PartitionTable struct {
 	Partitions []Partition
-	Size       uint64
-	SectorSize int
+	Size       uint64 // in bytes
+	SectorSize int    // in bytes
 }
 
 func (p *PartitionTable) GetInfo() string {

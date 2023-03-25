@@ -110,19 +110,9 @@ func (d *Disk) Write() error {
 }
 
 func (d *Disk) ReadVersion() (string, error) {
-	if d.partitionTable == nil {
-		return "", fmt.Errorf("invalid partition table")
-	}
-
-	var bootPartition *Partition
-	for _, partition := range d.partitionTable.Partitions {
-		if isFatPartition(&partition) {
-			bootPartition = &partition
-			break
-		}
-	}
-	if bootPartition == nil {
-		return "", fmt.Errorf("boot partition not found")
+	bootPartition, err := d.GetBootPartition()
+	if err != nil {
+		return "", err
 	}
 
 	versionFile, err := bootPartition.OpenFile("/version", os.O_RDONLY)
@@ -133,6 +123,41 @@ func (d *Disk) ReadVersion() (string, error) {
 	out := &bytes.Buffer{}
 	_, err = io.Copy(out, versionFile)
 	return out.String(), err
+}
+
+func (d *Disk) WriteVersion(version string) error {
+	bootPartition, err := d.GetBootPartition()
+	if err != nil {
+		return err
+	}
+
+	versionFile, err := bootPartition.OpenFile("/version", os.O_CREATE|os.O_RDWR)
+	if err != nil {
+		return err
+	}
+	defer versionFile.Close()
+
+	_, err = io.Copy(versionFile, bytes.NewBuffer([]byte(version)))
+
+	return err
+}
+
+func (d *Disk) GetBootPartition() (*Partition, error) {
+	if d.partitionTable == nil {
+		return nil, fmt.Errorf("invalid partition table")
+	}
+
+	var bootPartition *Partition
+	for _, partition := range d.partitionTable.Partitions {
+		if isFatPartition(&partition) {
+			bootPartition = &partition
+			break
+		}
+	}
+	if bootPartition == nil {
+		return nil, fmt.Errorf("boot partition not found")
+	}
+	return bootPartition, nil
 }
 
 func (d *Disk) GetPartitionTable() *PartitionTable {

@@ -11,8 +11,8 @@ import (
 
 type Partition struct {
 	Type   PartitionType
-	Start  uint32
-	Size   uint32
+	Start  uint32 //sectors
+	Size   uint32 //sectors
 	Index  int
 	parent *Disk
 }
