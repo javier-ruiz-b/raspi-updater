@@ -95,7 +95,7 @@ func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (
 	}
 	defer compressor.Close()
 
-	buffer := make([]byte, 4*1024*1024) // 4 MB
+	buffer := make([]byte, 1*1024*1024)
 	if _, err = io.CopyBuffer(w, compressor, buffer); err != nil {
 		return http.StatusInternalServerError, []byte(err.Error())
 	}
@@ -134,7 +134,7 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 	defer bar.Close()
 
 	// Copy the file data to the output file
-	buffer := make([]byte, 4*1024*1024) // 4 MB
+	buffer := make([]byte, 1*1024*1024)
 	if _, err = io.CopyBuffer(io.MultiWriter(outFile, streamTestWriter, bar), r.Body, buffer); err != nil {
 		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to copy %s", fileName))
 	}

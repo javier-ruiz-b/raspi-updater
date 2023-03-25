@@ -90,6 +90,8 @@ func (u *Updater) Run() error {
 		log.Printf("Couldn't sync")
 	}
 
+	log.Printf("Update complete. Rebooting in 5 seconds")
+	u.conf.Runner.RunPath("/usr/bin/sleep", "5")
 	if err := u.conf.Runner.RunPath("/usr/bin/busybox", "reboot", "-f"); err != nil {
 		log.Printf("Couldn't reboot")
 	}
@@ -273,7 +275,7 @@ func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.R
 
 	bar := progressbar.DefaultBytes(int64(partition.SizeBytes()), progressText)
 	defer bar.Close()
-	buffer := make([]byte, 4*1024*1024) // 4 MB
+	buffer := make([]byte, 1*1024*1024)
 	if _, err := io.CopyBuffer(io.MultiWriter(partitionStream, bar), remoteBootPartitionStream, buffer); err != nil {
 		return err
 	}
