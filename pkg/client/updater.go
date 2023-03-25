@@ -127,10 +127,12 @@ func (u *Updater) update() error {
 	if err := u.disk.Write(); err != nil {
 		return err
 	}
-	log.Print("Rereading partition table")
+	log.Print("Running partprobe")
 	if err := u.conf.Runner.RunPath("/bin/partprobe"); err != nil {
 		return err
 	}
+
+	log.Print("Reading disk")
 	if err := u.disk.Read(); err != nil {
 		return err
 	}

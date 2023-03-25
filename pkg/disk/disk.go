@@ -27,6 +27,7 @@ func (d *Disk) Read() error {
 	if err != nil {
 		return err
 	}
+	defer disk.File.Close()
 
 	table, err := disk.GetPartitionTable()
 	if err != nil {
@@ -74,6 +75,7 @@ func (d *Disk) Write() error {
 	if err != nil {
 		return err
 	}
+	defer disk.File.Close()
 
 	table, err := disk.GetPartitionTable()
 	if err != nil {

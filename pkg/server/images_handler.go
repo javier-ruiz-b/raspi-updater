@@ -104,13 +104,6 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 		return http.StatusMethodNotAllowed, []byte("Method not allowed")
 	}
 
-	// Get the uploaded file from the request body
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		return http.StatusBadRequest, []byte("Failed to get file")
-	}
-	defer file.Close()
-
 	imageName := mux.Vars(r)["id"]
 	compressionBinary := mux.Vars(r)["compression"]
 	if imageName == "" || compressionBinary == "" {
@@ -124,10 +117,25 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 	}
 	defer outFile.Close()
 
+	// Test compression on the fly
+	streamTestReader, streamTestWriter := io.Pipe()
+	tester := compression.NewStreamTester(streamTestReader, compressionBinary)
+	if err := tester.Open(); err != nil {
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to open stream tester with %s: %s", compressionBinary, err.Error()))
+	}
+	defer tester.Close()
+
 	// Copy the file data to the output file
-	_, err = io.Copy(outFile, file)
-	if err != nil {
+	if _, err = io.Copy(outFile, io.TeeReader(r.Body, streamTestWriter)); err != nil {
 		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to copy %s", fileName))
+	}
+
+	if err = streamTestWriter.Close(); err != nil {
+		return http.StatusInternalServerError, []byte("Can't close compression tester stream")
+	}
+
+	if _, err = tester.Read(make([]byte, 1)); err != io.EOF && err != nil {
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed testing compressed stream: %s", err.Error()))
 	}
 
 	return http.StatusOK, nil

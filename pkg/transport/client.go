@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"os"
 
@@ -88,6 +87,7 @@ func (c *ClientStruct) DownloadFile(filepath string, url string) error {
 		"Downloading",
 	)
 	_, err = io.Copy(out, io.TeeReader(responseStream, bar))
+	fmt.Println()
 	return err
 }
 
@@ -105,37 +105,12 @@ func (c *ClientStruct) GetDownloadStream(url string) (io.ReadCloser, int64, erro
 }
 
 func (c *ClientStruct) UploadStream(url string, stream io.Reader) error {
-	body, writer := io.Pipe()
-	request, err := c.tc.NewRequest(http.MethodPost, url, body)
+	request, err := c.tc.NewRequest(http.MethodPost, url, stream)
 	if err != nil {
 		return err
 	}
 
-	mwriter := multipart.NewWriter(writer)
-
-	request.Header.Add("Content-Type", mwriter.FormDataContentType())
-
-	errChan := make(chan error, 1)
-	go func() {
-		defer mwriter.Close()
-		// Create a new form file field
-		fileField, err := mwriter.CreateFormFile("file", "file")
-		if err != nil {
-			errChan <- err
-			return
-		}
-
-		if _, err = io.Copy(fileField, stream); err != nil {
-			errChan <- err
-			return
-		}
-
-		if err := mwriter.Close(); err != nil {
-			errChan <- err
-			return
-		}
-		errChan <- nil
-	}()
+	request.Header.Set("Content-Type", "application/octet-stream")
 
 	// Send the HTTP request and get the response
 	response, err := c.tc.Do(request)
@@ -147,9 +122,6 @@ func (c *ClientStruct) UploadStream(url string, stream io.Reader) error {
 	// Check the response status code for success
 	if response.StatusCode != http.StatusOK {
 		return fmt.Errorf("error uploading stream %s, unexpected status code: %d", url, response.StatusCode)
-	}
-	if err := <-errChan; err != nil {
-		return err
 	}
 
 	return err
