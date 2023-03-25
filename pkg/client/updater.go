@@ -202,7 +202,7 @@ func (u *Updater) backupBytes(localPartitionTable, remotePartitionTable *disk.Pa
 	lastRemotePartition := remotePartitionTable.Partitions[len(remotePartitionTable.Partitions)-1]
 	lastRemoteSector := lastRemotePartition.EndSector()
 	for _, localPartition := range localPartitionTable.Partitions {
-		if localPartition.EndSector() > lastRemoteSector {
+		if localPartition.EndSector() >= lastRemoteSector {
 			return int64(localPartition.EndSector()) * int64(localPartitionTable.SectorSize)
 		}
 	}
