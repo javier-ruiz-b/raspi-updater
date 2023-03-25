@@ -82,12 +82,12 @@ func (c *ClientStruct) DownloadFile(filepath string, url string) error {
 	}
 	defer responseStream.Close()
 
-	bar := progressbar.DefaultBytes(
-		contentLength,
-		"Downloading",
-	)
-	_, err = io.Copy(out, io.TeeReader(responseStream, bar))
-	fmt.Println()
+	bar := progressbar.DefaultBytes(contentLength, "Downloading")
+	defer bar.Close()
+
+	buffer := make([]byte, 1*1024*1024) // 1 MB
+	_, err = io.CopyBuffer(out, io.TeeReader(responseStream, bar), buffer)
+
 	return err
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/disk"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/images"
+	"github.com/schollz/progressbar/v3"
 )
 
 func (hc *HandlerConfig) imageVersionHandler(w http.ResponseWriter, r *http.Request) (int, []byte) {
@@ -85,13 +86,17 @@ func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (
 	}
 
 	size := int64(partition.Size) * int64(partitionTable.SectorSize)
-	compressor := compression.NewStreamCompressorN(stream, size, compressionBinary)
+	bar := progressbar.DefaultBytes(size, "Sending "+imageName+" partition "+strconv.Itoa(partitionIndex))
+	defer bar.Close()
+
+	compressor := compression.NewStreamCompressorN(io.TeeReader(stream, bar), size, compressionBinary)
 	if err = compressor.Open(); err != nil {
 		return http.StatusInternalServerError, []byte(err.Error())
 	}
 	defer compressor.Close()
 
-	if _, err = io.Copy(w, compressor); err != nil {
+	buffer := make([]byte, 4*1024*1024) // 4 MB
+	if _, err = io.CopyBuffer(w, compressor, buffer); err != nil {
 		return http.StatusInternalServerError, []byte(err.Error())
 	}
 
@@ -125,8 +130,12 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 	}
 	defer tester.Close()
 
+	bar := progressbar.DefaultBytes(-1, "Saving backup "+imageName)
+	defer bar.Close()
+
 	// Copy the file data to the output file
-	if _, err = io.Copy(outFile, io.TeeReader(r.Body, streamTestWriter)); err != nil {
+	buffer := make([]byte, 4*1024*1024) // 4 MB
+	if _, err = io.CopyBuffer(io.MultiWriter(outFile, streamTestWriter, bar), r.Body, buffer); err != nil {
 		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to copy %s", fileName))
 	}
 

@@ -3,6 +3,7 @@ package runner
 import (
 	"log"
 	"os"
+	"strings"
 )
 
 type FakeRunner struct {
@@ -18,7 +19,7 @@ func (r *FakeRunner) Run(file *os.File, args ...string) error {
 }
 
 func (o *FakeRunner) RunPath(filePath string, args ...string) error {
-	log.Print("Faking successful ", filePath, " execution")
+	log.Print("Faking successful ", filePath, " ", strings.Join(args, " "), " execution")
 	o.isRun = true
 	return nil
 }

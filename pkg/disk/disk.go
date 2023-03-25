@@ -119,9 +119,11 @@ func (d *Disk) ReadVersion() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer versionFile.Close()
 
 	out := &bytes.Buffer{}
 	_, err = io.Copy(out, versionFile)
+
 	return out.String(), err
 }
 

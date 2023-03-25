@@ -73,8 +73,28 @@ func (u *Updater) Run() error {
 		return nil
 	}
 
-	log.Printf("Update Available. Server version: %s, Client version:%s", serverVersion, localVersion)
-	return u.update()
+	log.Printf("Image update available.\n  Server version: %s\n  Client version: %s\n", serverVersion, localVersion)
+	if err = u.update(); err != nil {
+		return err
+	}
+
+	if err = u.disk.Read(); err != nil {
+		log.Printf("Couldn't reread disk")
+	}
+
+	if err = u.disk.WriteVersion(serverVersion); err != nil {
+		log.Printf("Couldn't write version %s after update", serverVersion)
+	}
+
+	if err := u.conf.Runner.RunPath("/bin/sync"); err != nil {
+		log.Printf("Couldn't sync")
+	}
+
+	if err := u.conf.Runner.RunPath("/usr/bin/busybox", "reboot", "-f"); err != nil {
+		log.Printf("Couldn't reboot")
+	}
+
+	return nil
 }
 
 func (u *Updater) update() error {
@@ -91,25 +111,13 @@ func (u *Updater) update() error {
 	}
 
 	log.Print("Downloading boot partition")
-	compressedBootPartition, err := os.CreateTemp(os.TempDir(), "boot")
+	downloadedBootPartitionPath, err := u.downloadBootPartition(u.partitionDownloadUrl(remoteBootPartition))
 	if err != nil {
 		return err
 	}
-	defer os.Remove(compressedBootPartition.Name())
+	defer os.Remove(downloadedBootPartitionPath)
 
-	if err := u.qc.DownloadFile(compressedBootPartition.Name(), u.partitionDownloadUrl(remoteBootPartition)); err != nil {
-		return err
-	}
-	if _, err = compressedBootPartition.Seek(0, 0); err != nil {
-		return err
-	}
-
-	log.Print("Checking downloaded boot partition")
-	if err := compression.CheckFile(*u.conf.CompressionTool, compressedBootPartition.Name()); err != nil {
-		return err
-	}
 	localPartitionInfo := u.disk.GetPartitionTable().GetInfo()
-
 	log.Print("Backing up disk")
 	if err := u.backupDisk(u.backupBytes(u.disk.GetPartitionTable(), &remotePartitionTable)); err != nil {
 		return err
@@ -129,6 +137,7 @@ func (u *Updater) update() error {
 	if err := u.disk.Write(); err != nil {
 		return err
 	}
+
 	log.Print("Running partprobe")
 	if err := u.conf.Runner.RunPath("/bin/partprobe"); err != nil {
 		return err
@@ -144,11 +153,13 @@ func (u *Updater) update() error {
 	if err != nil {
 		return err
 	}
-
+	compressedBootPartition, err := os.Open(downloadedBootPartitionPath)
+	if err != nil {
+		return err
+	}
 	if err = u.writePartition(localBootPartition, compressedBootPartition, "Writing boot partition"); err != nil {
 		return err
 	}
-
 	if err = compressedBootPartition.Close(); err != nil {
 		return err
 	}
@@ -174,6 +185,46 @@ func (u *Updater) update() error {
 	}
 
 	return nil
+}
+
+func (u *Updater) downloadBootPartition(url string) (string, error) {
+	compressedBootPartition, err := os.CreateTemp(os.TempDir(), "boot")
+	if err != nil {
+		return "", err
+	}
+	defer compressedBootPartition.Close()
+
+	// Test compression on the fly
+	streamTestReader, streamTestWriter := io.Pipe()
+	tester := compression.NewStreamTester(streamTestReader, *u.conf.CompressionTool)
+	if err := tester.Open(); err != nil {
+		return "", err
+	}
+	defer tester.Close()
+
+	downloadStream, contentLength, err := u.qc.GetDownloadStream(url)
+	if err != nil {
+		return "", err
+	}
+
+	bar := progressbar.DefaultBytes(contentLength, "Download boot partition")
+	defer bar.Close()
+
+	// Copy the file data to the output file
+	buffer := make([]byte, 1*1024*1024) // 1 MB
+	if _, err := io.CopyBuffer(io.MultiWriter(compressedBootPartition, streamTestWriter, bar), downloadStream, buffer); err != nil {
+		return "", err
+	}
+
+	if err = streamTestWriter.Close(); err != nil {
+		return "", err
+	}
+
+	if _, err = tester.Read(make([]byte, 1)); err != io.EOF && err != nil {
+		return "", fmt.Errorf("failed testing compressed stream: %s", err.Error())
+	}
+
+	return compressedBootPartition.Name(), nil
 }
 
 func (u *Updater) backupDisk(backupDiskLength int64) error {
@@ -221,7 +272,9 @@ func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.R
 	}
 
 	bar := progressbar.DefaultBytes(int64(partition.SizeBytes()), progressText)
-	if _, err := io.Copy(io.MultiWriter(partitionStream, bar), remoteBootPartitionStream); err != nil {
+	defer bar.Close()
+	buffer := make([]byte, 4*1024*1024) // 4 MB
+	if _, err := io.CopyBuffer(io.MultiWriter(partitionStream, bar), remoteBootPartitionStream, buffer); err != nil {
 		return err
 	}
 

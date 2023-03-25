@@ -15,6 +15,10 @@ func (hc *HandlerConfig) updateHandler(w http.ResponseWriter, r *http.Request) (
 		return http.StatusNotFound, []byte(err.Error())
 	}
 
-	io.Copy(w, file)
+	buffer := make([]byte, 1*1024*1024) // 1 MB
+	if _, err = io.CopyBuffer(w, file, buffer); err != nil {
+		return http.StatusInternalServerError, []byte(err.Error())
+	}
+
 	return http.StatusOK, nil
 }
