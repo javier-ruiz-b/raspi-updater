@@ -121,7 +121,7 @@ func TestAcceptance(t *testing.T) {
 }
 
 func createEmptyImage(imageFile string, size int64) error {
-	mydisk, err := diskfs.Create(imageFile, size, diskfs.Raw)
+	mydisk, err := diskfs.Create(imageFile, size, diskfs.Raw, 512)
 	if err != nil {
 		return err
 	}

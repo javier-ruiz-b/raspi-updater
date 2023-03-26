@@ -24,11 +24,11 @@ func setup() {
 
 	imageFile = tempDir + "/disk.img"
 
+	var sectorSize int64 = 512
 	var diskSize int64 = 64 * 1024 * 1024 // 64 MB
-	mydisk, err := diskfs.Create(imageFile, diskSize, diskfs.Raw)
+	mydisk, err := diskfs.Create(imageFile, diskSize, diskfs.Raw, diskfs.SectorSize(sectorSize))
 	check(err)
 
-	var sectorSize int64 = 512
 	startBoot := uint32(1)
 	sizeBoot := uint32((48 * 1024 * 1024) / sectorSize) //48mb
 	startRoot := startBoot + sizeBoot

@@ -56,7 +56,7 @@ func createsImageWithOnePartition(t *testing.T, imageFile string) {
 	var diskSize int64 = 64 * 1024 * 1024 // 64 MB
 	var sectorSize int64 = 512
 
-	mydisk, err := diskfs.Create(imageFile, diskSize, diskfs.Raw)
+	mydisk, err := diskfs.Create(imageFile, diskSize, diskfs.Raw, diskfs.SectorSize(sectorSize))
 	assert.Nil(t, err)
 	startBoot := uint32(1)
 	sizeBoot := uint32((48 * 1024 * 1024) / sectorSize) //48mb
