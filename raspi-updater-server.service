@@ -1,0 +1,9 @@
+[Unit]
+Description=Raspberry Updater Server
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/raspi-updater-server
+
+[Install]
+WantedBy=multi-user.target
