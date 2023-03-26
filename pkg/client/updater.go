@@ -69,7 +69,6 @@ func (u *Updater) Run() error {
 	log.Print("Checking for image update for " + *u.conf.Id)
 	imageUrlVersion := strings.Replace(server.API_IMAGES_VERSION, "{id}", *u.conf.Id, 1)
 	serverVersion, err := u.qc.GetString(imageUrlVersion)
-
 	if err != nil {
 		log.Print("No image found for ", *u.conf.Id)
 		return nil
@@ -245,6 +244,7 @@ func (u *Updater) backupDisk(backupDiskLength int64, force bool) error {
 	if !force {
 		backupExists, _ := u.backupExists(localVersion)
 		if backupExists {
+			log.Println("Backup exists on server.")
 			return nil
 		}
 	}
@@ -277,14 +277,10 @@ func (u *Updater) backupExists(localVersion string) (bool, error) {
 	var backupExists bool
 	err := u.qc.GetObject(backupExistsUrl, backupExists)
 	if err != nil {
-		return true, err
+		log.Println("Error requesting backup status: ", err)
+		return false, err
 	}
-
-	if backupExists {
-		log.Println("Backup exists on server.")
-		return true, nil
-	}
-	return false, nil
+	return backupExists, nil
 }
 
 func (u *Updater) backupLengthLocal(localPartitionTable *disk.PartitionTable) int64 {
