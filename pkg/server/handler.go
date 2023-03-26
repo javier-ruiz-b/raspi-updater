@@ -9,7 +9,8 @@ import (
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/images"
 )
 
-const API_IMAGES_BACKUP string = "/images/{id}/backup/{compression}"
+const API_IMAGES_BACKUP string = "/images/{id}/backup/{version}/{compression}"
+const API_IMAGES_BACKUP_EXISTS string = "/images/{id}/backup_exists/{version}"
 const API_IMAGES_VERSION string = "/images/{id}/version"
 const API_IMAGES_PARTITION_TABLE string = "/images/{id}/partitionTable"
 const API_IMAGES_DOWNLOAD string = "/images/{id}/download/{partitionIndex}-{compression}"
@@ -37,6 +38,7 @@ func newMainHandler(options *config.ServerConfig) http.Handler {
 	serveMux.Handle(API_IMAGES_PARTITION_TABLE, newPathHandler(hc.imagePartitionTableHandler))
 	serveMux.Handle(API_IMAGES_DOWNLOAD, newPathHandler(hc.imageDownload))
 	serveMux.Handle(API_IMAGES_BACKUP, newPathHandler(hc.imageBackup))
+	serveMux.Handle(API_IMAGES_BACKUP_EXISTS, newPathHandler(hc.imageBackupExists))
 
 	return serveMux
 }

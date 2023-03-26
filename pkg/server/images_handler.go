@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
@@ -103,6 +102,20 @@ func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (
 	return http.StatusOK, nil
 }
 
+func (hc *HandlerConfig) imageBackupExists(w http.ResponseWriter, r *http.Request) (int, []byte) {
+	imageName := mux.Vars(r)["id"]
+	version := mux.Vars(r)["version"]
+
+	backupExists := hc.imageDir.BackupExists(imageName, version)
+
+	err := gob.NewEncoder(w).Encode(backupExists)
+	if err != nil {
+		return http.StatusInternalServerError, []byte(err.Error())
+	}
+
+	return http.StatusOK, nil
+}
+
 func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (int, []byte) {
 	// Check if the request method is POST
 	if r.Method != http.MethodPost {
@@ -114,11 +127,11 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 	if imageName == "" || compressionBinary == "" {
 		return http.StatusBadRequest, []byte("Missing parameters")
 	}
+	version := mux.Vars(r)["version"]
 
-	fileName := imageName + "_" + time.Now().Format("2006-01-02_15-04-05") + ".img." + compressionBinary
-	outFile, err := hc.imageDir.CreateBackup(fileName)
+	outFile, err := hc.imageDir.CreateBackup(imageName, version, compressionBinary)
 	if err != nil {
-		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to create %s", fileName))
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to create backup: %v", err))
 	}
 	defer outFile.Close()
 
@@ -136,7 +149,7 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 	// Copy the file data to the output file
 	buffer := make([]byte, 1*1024*1024)
 	if _, err = io.CopyBuffer(io.MultiWriter(outFile, streamTestWriter, bar), r.Body, buffer); err != nil {
-		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to copy %s", fileName))
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to create backup %s", outFile.Name()))
 	}
 
 	if err = streamTestWriter.Close(); err != nil {

@@ -61,15 +61,22 @@ func (u *Updater) Run() error {
 		log.Printf("Warning: could not read local version: %v", err)
 	}
 
-	log.Print("Checking for image update for " + *u.conf.Id)
-	imageUrlVersion := strings.Replace(server.API_IMAGES_VERSION, "{id}", *u.conf.Id, 1)
-	serverVersion, err := u.qc.GetString(imageUrlVersion)
+	err = u.backupDisk(u.backupLengthLocal(u.disk.GetPartitionTable()), false)
 	if err != nil {
 		return err
 	}
 
+	log.Print("Checking for image update for " + *u.conf.Id)
+	imageUrlVersion := strings.Replace(server.API_IMAGES_VERSION, "{id}", *u.conf.Id, 1)
+	serverVersion, err := u.qc.GetString(imageUrlVersion)
+
+	if err != nil {
+		log.Print("No image found for ", *u.conf.Id)
+		return nil
+	}
+
 	if localVersion == serverVersion {
-		log.Print("Up to date!")
+		log.Print("Up to date.")
 		return nil
 	}
 
@@ -120,8 +127,7 @@ func (u *Updater) update() error {
 	defer os.Remove(downloadedBootPartitionPath)
 
 	localPartitionInfo := u.disk.GetPartitionTable().GetInfo()
-	log.Print("Backing up disk")
-	if err := u.backupDisk(u.backupBytes(u.disk.GetPartitionTable(), &remotePartitionTable)); err != nil {
+	if err := u.backupDisk(u.backupLengthLocalAndRemote(u.disk.GetPartitionTable(), &remotePartitionTable), true); err != nil {
 		return err
 	}
 
@@ -229,7 +235,20 @@ func (u *Updater) downloadBootPartition(url string) (string, error) {
 	return compressedBootPartition.Name(), nil
 }
 
-func (u *Updater) backupDisk(backupDiskLength int64) error {
+func (u *Updater) backupDisk(backupDiskLength int64, force bool) error {
+	log.Print("Backing up disk if necessary")
+	localVersion, _ := u.disk.ReadVersion()
+	if localVersion == "" {
+		localVersion = "0"
+	}
+
+	if !force {
+		backupExists, _ := u.backupExists(localVersion)
+		if backupExists {
+			return nil
+		}
+	}
+
 	disk, err := os.Open(*u.conf.DiskDevice)
 	if err != nil {
 		return err
@@ -246,12 +265,37 @@ func (u *Updater) backupDisk(backupDiskLength int64) error {
 	defer diskCompressionStream.Close()
 
 	backupUrl := strings.Replace(server.API_IMAGES_BACKUP, "{id}", *u.conf.Id, 1)
+	backupUrl = strings.Replace(backupUrl, "{version}", localVersion, 1)
 	backupUrl = strings.Replace(backupUrl, "{compression}", *u.conf.CompressionTool, 1)
 
 	return u.qc.UploadStream(backupUrl, diskCompressionStream)
 }
 
-func (u *Updater) backupBytes(localPartitionTable, remotePartitionTable *disk.PartitionTable) int64 {
+func (u *Updater) backupExists(localVersion string) (bool, error) {
+	backupExistsUrl := strings.Replace(server.API_IMAGES_BACKUP_EXISTS, "{id}", *u.conf.Id, 1)
+	backupExistsUrl = strings.Replace(backupExistsUrl, "{version}", localVersion, 1)
+	var backupExists bool
+	err := u.qc.GetObject(backupExistsUrl, backupExists)
+	if err != nil {
+		return true, err
+	}
+
+	if backupExists {
+		log.Println("Backup exists on server.")
+		return true, nil
+	}
+	return false, nil
+}
+
+func (u *Updater) backupLengthLocal(localPartitionTable *disk.PartitionTable) int64 {
+	if len(localPartitionTable.Partitions) == 0 {
+		return int64(localPartitionTable.Size)
+	}
+	lastLocalPartition := localPartitionTable.Partitions[len(localPartitionTable.Partitions)-1]
+	return int64(lastLocalPartition.EndSector()) * int64(localPartitionTable.SectorSize)
+}
+
+func (u *Updater) backupLengthLocalAndRemote(localPartitionTable, remotePartitionTable *disk.PartitionTable) int64 {
 	lastRemotePartition := remotePartitionTable.Partitions[len(remotePartitionTable.Partitions)-1]
 	lastRemoteSector := lastRemotePartition.EndSector()
 	for _, localPartition := range localPartitionTable.Partitions {

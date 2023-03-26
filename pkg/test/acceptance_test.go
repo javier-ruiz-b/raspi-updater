@@ -27,7 +27,8 @@ var tempDir string
 var clientImage string
 var serverImage string
 var serv *server.Server
-var clientConfig *config.ClientConfig
+
+// var clientConfig *config.ClientConfig
 
 // var imagesDir string = "../testdata"
 var id string = "acceptance"
@@ -55,8 +56,6 @@ func setup() {
 	clientImage = tempDir + "/client.img"
 	serverImage = tempDir + "/" + id + "_1.0.img"
 
-	clientConfig = newClientConfig()
-	clientConfig.DiskDevice = &clientImage
 }
 
 func teardown() {
@@ -65,6 +64,8 @@ func teardown() {
 }
 
 func TestUpdateClientBinary(t *testing.T) {
+	clientConfig := newClientConfig()
+	clientConfig.DiskDevice = &clientImage
 	runner := clientConfig.Runner.(*runner.FakeRunner)
 	differentVersion := "0.0.0"
 	clientConfig.Version = &differentVersion
@@ -79,6 +80,8 @@ func TestAcceptance(t *testing.T) {
 	assert.Nil(t, createEmptyImage(clientImage, 64*1024*1024))
 	assert.Nil(t, createImageToBeCopied(serverImage))
 
+	clientConfig := newClientConfig()
+	clientConfig.DiskDevice = &clientImage
 	runner := clientConfig.Runner.(*runner.FakeRunner)
 
 	err := client.RunClient(clientConfig)
