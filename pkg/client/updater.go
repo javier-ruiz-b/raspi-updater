@@ -275,7 +275,7 @@ func (u *Updater) backupExists(localVersion string) (bool, error) {
 	backupExistsUrl := strings.Replace(server.API_IMAGES_BACKUP_EXISTS, "{id}", *u.conf.Id, 1)
 	backupExistsUrl = strings.Replace(backupExistsUrl, "{version}", localVersion, 1)
 	var backupExists bool
-	err := u.qc.GetObject(backupExistsUrl, backupExists)
+	err := u.qc.GetObject(backupExistsUrl, &backupExists)
 	if err != nil {
 		log.Println("Error requesting backup status: ", err)
 		return false, err
