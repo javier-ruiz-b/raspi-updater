@@ -40,6 +40,9 @@ done
 
 if [ "${DEVICE:-}" = "" ]; then
     DEVICE=$(grep ' / ' /proc/mounts  | cut -d ' ' -f1)
+    if [ "$DEVICE" = "/dev/root" ]; then
+        DEVICE=/dev/mmcblk0
+    fi
 fi
 
 while [ "${ID:-}" = "" ]; do

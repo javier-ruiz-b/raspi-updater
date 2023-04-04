@@ -25,7 +25,7 @@ if [ -f /.dockerenv ]; then
     echo "Docker acceptance test. Skipping network configuration"
 else
     echo "Waiting for $NET_INTERFACE"
-    modprobe -qb "$NET_DRIVER" || error "Could not load $NET_DRIVER"
+    modprobe -qb "$NET_DRIVER" || echo "Error probing $NET_DRIVER. Trying anyway."
 
     for _ in $(seq 1 10); do
         [ -d "/sys/class/net/$NET_INTERFACE" ] && break
