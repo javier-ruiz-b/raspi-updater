@@ -3,9 +3,9 @@ set -euxo pipefail
 cd "$(dirname "$(realpath "$0")")"
 
 # https://www.internalpointers.com/post/build-binary-deb-package-practical-guide
-VERSION=$(cat ../version.txt)
+VERSION=$(cat ./version.txt)
 output_dir="$(pwd)/output"
-mkdir -p "$output_dir"
+mkdir -p "$output_dir" "$GOPATH"
 rm -rf "${output_dir:?}/"*
 
 tmpdir=$(mktemp -d)
@@ -17,7 +17,7 @@ if [ "$*" != "" ]; then
     archs=("$@")
 fi
 
-for arch in "${archs[@]}"; do # TODO: armhf arm64
+for arch in "${archs[@]}"; do
     package_name="raspi-updater_${VERSION}_${arch}"
     package_dir="$tmpdir/${package_name}"
     mkdir "$package_dir"
@@ -25,15 +25,27 @@ for arch in "${archs[@]}"; do # TODO: armhf arm64
     cp -rf rootfs/* DEBIAN/ "$package_dir"
 
     output_bin="$package_dir/usr/share/raspi-updater/raspi-updater"
+    export GOOS=linux
+    export CGO_ENABLED=0
     case $arch in
-    amd64)
-        GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o "$output_bin" ../cmd/updater/*.go ;;
-    armhf)
-        GOOS=linux GOARCH=arm GOARM=6 go build -ldflags "-s -w" -o "$output_bin" ../cmd/updater/*.go ;;
-    arm64)
-        GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o "$output_bin" ../cmd/updater/*.go ;; 
+    amd64)  
+        export GOARCH=amd64
+        export CC="" 
+        ;;
+    armhf)  
+        export GOARCH=arm
+        export GOARM=6
+        export CC=arm-linux-gnueabihf-gcc
+        ;;
+    arm64)  
+        export GOARCH=arm64
+        export CC=aarch64-linux-gnu-gcc 
+        ;; 
+    *)      echo "Architecture $arch unknown"; exit 1 ;;
     esac
-    
+
+    go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o "$output_bin" ../cmd/updater/*.go 
+
     cd "$tmpdir"
     chmod +x "$package_dir/usr/share/initramfs-tools/hooks"/* \
              "$package_dir/usr/share/initramfs-tools/scripts"/*/* \

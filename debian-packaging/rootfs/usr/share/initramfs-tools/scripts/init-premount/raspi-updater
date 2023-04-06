@@ -7,4 +7,53 @@ prereqs)
     exit 0 ;;
 esac
 
-/usr/bin/raspi-updater-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.
+if grep 'raspi-updater-skip' /proc/cmdline; then
+    echo "Detected raspi-updater-skip"
+    exit 0
+fi
+
+umount_and_exit() {
+    umount "$mount_dir"
+    exit 0
+}
+
+mount_dir=/mnt/boot
+mkdir -p "$mount_dir"
+for partition in /mmcblk*p1 /dev/sd*1; do
+    if [ ! -e "$partition" ]; then
+        continue
+    fi
+
+    FSTYPE=$(blkid -o value -s TYPE "$partition")
+    mount -t "$FSTYPE" -o rw,noatime "$partition" "$mount_dir" || continue
+
+    for dir in raspi-updater boot/raspi-updater; do
+        if [ -d "$mount_dir/$dir" ]; then
+            files_dir="$mount_dir/$dir"
+            break
+        fi
+    done
+    
+    umount "$mount_dir"
+done
+
+if [ ! -e "$files_dir/initramfs-script" ]; then
+    echo "Could not find partition with raspi-updater directory"
+    umount_and_exit
+fi
+
+lock_file="$files_dir/lock"
+if [ -f "$lock_file" ]; then
+    echo "Previous raspi-updater was unsuccessful. Deleting lock and continue booting."
+    rm "$lock_file"
+    umount_and_exit
+fi
+touch "$lock_file"
+
+mkdir -p /tmp
+cp -ra "$files_dir" /tmp
+cd /tmp/raspi-updater
+umount "$mount_dir"
+
+chmod +x ./initramfs-script 
+./initramfs-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.

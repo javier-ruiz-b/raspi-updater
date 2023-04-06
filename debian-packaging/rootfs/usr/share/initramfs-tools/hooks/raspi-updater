@@ -13,8 +13,19 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-mkdir -p "$DESTDIR/etc/raspi-updater"
-cp -p "/etc/raspi-updater/raspi-updater.conf" "$DESTDIR/etc/raspi-updater"
+#load config file
+conf_file="/etc/raspi-updater/raspi-updater.conf"
+. "$conf_file"
+
+# copy files to /boot
+boot_dir="/boot/raspi-updater"
+mkdir -p "$boot_dir"
+cp -p "$conf_file" "$boot_dir/"
+cp -p /usr/share/raspi-updater/initramfs-script "$boot_dir/"
+cp -p /usr/share/raspi-updater/raspi-updater  "$boot_dir/client-raspi-updater"
+cp -p "$CERT_FILE" "$boot_dir/"
+
+copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin
 
 # for setting IP from DHCP client (requires udhcpc)
 mkdir -p "$DESTDIR/etc/udhcpc"
@@ -26,20 +37,6 @@ cp -p /etc/nsswitch.conf "$DESTDIR/etc"
 
 # In case busybox did not create symlinks...
 ln -sf "/bin/busybox" "$DESTDIR/bin/partprobe"
-
-. "/etc/raspi-updater/raspi-updater.conf"
-
-mkdir -p "$DESTDIR/usr/bin"
-cp -p /usr/share/raspi-updater/initramfs-script "$DESTDIR/usr/bin/raspi-updater-script"
-chmod +x "$DESTDIR/usr/bin/raspi-updater-script"
-
-copy_exec /usr/share/raspi-updater/raspi-updater      /usr/bin/client-raspi-updater
-copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin
-
-cert_file_dir="$DESTDIR/$(dirname "$CERT_FILE")"
-mkdir -p "$cert_file_dir"
-cp -p "$CERT_FILE" "$cert_file_dir"
-
 
 if echo "$NET_INTERFACE" | grep '^wlan'; then
     mkdir -p "$DESTDIR/usr/sbin" \
@@ -59,5 +56,5 @@ if echo "$NET_INTERFACE" | grep '^wlan'; then
     # cp -p "/etc/group" "/etc/passwd"  "$DESTDIR/etc"
 fi
 
-# add net driver
-manual_add_modules "$NET_DRIVER"
+# add net driver and filesystem drivers
+manual_add_modules "$NET_DRIVER" ext4 vfat

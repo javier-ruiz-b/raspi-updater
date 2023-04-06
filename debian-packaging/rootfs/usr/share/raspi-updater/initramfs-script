@@ -11,7 +11,8 @@ error() {
     exit 1
 }
 
-. /etc/raspi-updater/raspi-updater.conf || error "Could not load raspi-updater.conf"
+. ./raspi-updater.conf || error "Could not load raspi-updater.conf"
+CERT_FILE="./$(basename "$CERT_FILE")"
 
 client_time="$(busybox date +%s -r "$CERT_FILE")"
 system_time="$(busybox date +%s)"
