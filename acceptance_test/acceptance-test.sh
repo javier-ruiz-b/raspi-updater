@@ -9,8 +9,6 @@ mkdir -p "$HOME/go/pkg"
 ln -sd /cache "$HOME/go/pkg/mod"
 
 cd "$src_dir"
-arch="$(dpkg --print-architecture)"
-debian-packaging/build.sh "$arch"
 sudo dpkg -i debian-packaging/output/raspi-updater*.deb
 
 export DEVICE=/tmp/updater.img

@@ -5,6 +5,9 @@ RUN apt-get update && \
         busybox \
         ca-certificates \
         dumb-init \
+        gcc \
+        gcc-aarch64-linux-gnu \
+        gcc-arm-linux-gnueabihf \
         golang \
         grep \
         gzip \
@@ -34,4 +37,4 @@ WORKDIR /home/myuser
 
 COPY *.sh /
 
-CMD ["dumb-init", "bash", "/entrypoint.sh"]
+ENTRYPOINT ["dumb-init", "bash"]
