@@ -12,53 +12,41 @@ if grep 'raspi-updater-skip' /proc/cmdline; then
     exit 0
 fi
 
-umount_and_exit() {
-    umount "$mount_dir"
+error() {
+    echo "$@"
+    grep "$mount_dir" /proc/mounts && umount "$mount_dir" || true
+    sleep 3
     exit 0
 }
 
 mount_dir=/mnt/boot
 mkdir -p "$mount_dir"
-for partition in /mmcblk*p1 /dev/sd*1; do
-    if [ ! -e "$partition" ]; then
-        continue
-    fi
 
-    FSTYPE=$(blkid -o value -s TYPE "$partition")
-    mount -t "$FSTYPE" -o rw,noatime "$partition" "$mount_dir" || continue
+. "$DESTDIR/etc/raspi-updater/boot.conf" || error "boot.conf not found"
 
-    for dir in raspi-updater boot/raspi-updater; do
-        if [ -d "$mount_dir/$dir" ]; then
-            files_dir="$mount_dir/$dir"
-            break
-        fi
-    done
-    
-    umount "$mount_dir"
-done
+mount -t "$FSTYPE" -o rw,noatime "$BOOTDEVICE" "$mount_dir" || echo "Could not mount $BOOTDEVICE"
 
 if [ -f /.dockerenv ]; then
     files_dir="/boot/raspi-updater"
+else
+    files_dir="$mount_dir/$BOOTUPDATERDIR"
 fi
 
 if [ ! -e "$files_dir/initramfs-script" ]; then
-    bash
-    echo "Could not find partition with raspi-updater directory"
-    umount_and_exit
+    error "Could not find partition with raspi-updater directory"
 fi
 
 lock_file="$files_dir/lock"
 if [ -f "$lock_file" ]; then
-    echo "Previous raspi-updater was unsuccessful. Deleting lock and continue booting."
     rm "$lock_file"
-    umount_and_exit
+    error "Previous raspi-updater was unsuccessful. Deleting lock and continue booting."
 fi
 touch "$lock_file"
 
 mkdir -p /tmp
 cp -ra "$files_dir" /tmp
 cd /tmp/raspi-updater
-umount "$mount_dir" || true
+umount "$mount_dir" || umount -l "$mount_dir" || true
 
 chmod +x ./initramfs-script 
 ./initramfs-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.

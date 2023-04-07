@@ -25,6 +25,20 @@ cp -p /usr/share/raspi-updater/initramfs-script "$boot_dir/"
 cp -p /usr/share/raspi-updater/raspi-updater  "$boot_dir/"
 cp -p "$CERT_FILE" "$boot_dir/"
 
+# copy information of /boot to ramdisk
+BOOTDEVICE=$(df -P "$boot_dir" | tail -n1 | awk '{print $1}')
+BOOTMOUNT=$(df -P "$boot_dir" | tail -n1 | awk '{print $6}')
+BOOTUPDATERDIR=${boot_dir#"$BOOTMOUNT"-}
+FSTYPE=$(blkid -o value -s TYPE "$BOOTDEVICE" || true)
+
+mkdir -p "$DESTDIR/etc/raspi-updater"
+cat <<EOF > "$DESTDIR/etc/raspi-updater/boot.conf"
+BOOTDEVICE=$BOOTDEVICE
+BOOTMOUNT=$BOOTMOUNT
+BOOTUPDATERDIR=$BOOTUPDATERDIR
+FSTYPE=$FSTYPE
+EOF
+
 copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin
 
 # for setting IP from DHCP client (requires udhcpc)

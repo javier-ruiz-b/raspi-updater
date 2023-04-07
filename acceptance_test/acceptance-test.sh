@@ -73,6 +73,7 @@ if lz4cat "$EXPECTED_IMAGE" | diff "$ACTUAL_IMAGE" -; then
     echo "Test succesful"
 else
     echo "Error: images are NOT identical"
+    sleep 3
     lz4cat "$EXPECTED_IMAGE" | cmp -l "$ACTUAL_IMAGE" -
     bash
 fi
