@@ -28,20 +28,18 @@ EOF
 
 raspi-updater-config  # update configuration
 
-[ -f /usr/share/raspi-updater/raspi-updater ] || (
-    echo raspi-updater not found
-    exit 1
-)
-
 (   
+    set -x
     /usr/share/raspi-updater/raspi-updater \
         -address "$SERVER" \
         -certFile "$src_dir/pkg/testdata/cert.pem" \
         -keyFile "$src_dir/pkg/testdata/priv.key" \
         -images "$src_dir/test/images" \
         -updater "$src_dir/pkg/testdata/bin" \
-        -verbose 
-    echo "raspi-updater terminated"
+        -verbose
+
+    echo "ERROR: raspi-updater terminated"
+    kill $$ || kill -9 $$
 )   &
     
 pid_server=$!
@@ -61,23 +59,20 @@ mkdir tmp
 lz4cat "$EXPECTED_IMAGE" | dd bs=512 of="$(pwd)/$DEVICE" count=1 || true
 dd if=/dev/zero bs=$(((64*1024*1024) - 512)) count=1 >> "$(pwd)/$DEVICE" || true
 
-if lz4cat "$EXPECTED_IMAGE" | diff "$EXPECTED_IMAGE" -; then
-    echo "Error: images are identical before running test"
-    exit 1
-fi
-
 lz4 -d -c /boot/initrd.img* | cpio -id
 cp /.dockerenv "$(pwd)"
 
 echo running raspi-update initramfs hook
 
-mkdir dev
+mkdir dev boot
 cp /dev/null dev
+sudo mv /boot/raspi-updater ./boot
 sudo chroot "$(pwd)" sh -x scripts/init-premount/raspi-updater 
 
 if lz4cat "$EXPECTED_IMAGE" | diff "$ACTUAL_IMAGE" -; then
     echo "Test succesful"
 else
     echo "Error: images are NOT identical"
+    lz4cat "$EXPECTED_IMAGE" | cmp -l "$ACTUAL_IMAGE" -
     bash
 fi

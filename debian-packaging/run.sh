@@ -3,4 +3,4 @@ set -eu
 
 cd "$(dirname "$(realpath "$0")")"/..
 
-docker/run.sh debian-packaging/build-packages.sh
+docker/run.sh debian-packaging/build-packages.sh "$@"

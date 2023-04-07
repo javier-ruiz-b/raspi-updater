@@ -61,7 +61,7 @@ func (u *Updater) Run() error {
 		log.Printf("Warning: could not read local version: %v", err)
 	}
 
-	err = u.backupDisk(u.backupLengthLocal(u.disk.GetPartitionTable()), false)
+	err = u.backupDisk(u.backupLengthLocal(u.disk.GetPartitionTable()))
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (u *Updater) update() error {
 	defer os.Remove(downloadedBootPartitionPath)
 
 	localPartitionInfo := u.disk.GetPartitionTable().GetInfo()
-	if err := u.backupDisk(u.backupLengthLocalAndRemote(u.disk.GetPartitionTable(), &remotePartitionTable), true); err != nil {
+	if err := u.backupDisk(u.backupLengthLocalAndRemote(u.disk.GetPartitionTable(), &remotePartitionTable)); err != nil {
 		return err
 	}
 
@@ -234,19 +234,17 @@ func (u *Updater) downloadBootPartition(url string) (string, error) {
 	return compressedBootPartition.Name(), nil
 }
 
-func (u *Updater) backupDisk(backupDiskLength int64, force bool) error {
+func (u *Updater) backupDisk(backupDiskLength int64) error {
 	log.Print("Backing up disk if necessary")
 	localVersion, _ := u.disk.ReadVersion()
 	if localVersion == "" {
 		localVersion = "0"
 	}
 
-	if !force {
-		backupExists, _ := u.backupExists(localVersion)
-		if backupExists {
-			log.Println("Backup exists on server.")
-			return nil
-		}
+	backupExists, _ := u.backupExists(localVersion)
+	if backupExists {
+		log.Println("Backup exists on server.")
+		return nil
 	}
 
 	disk, err := os.Open(*u.conf.DiskDevice)

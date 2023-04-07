@@ -37,7 +37,12 @@ for partition in /mmcblk*p1 /dev/sd*1; do
     umount "$mount_dir"
 done
 
+if [ -f /.dockerenv ]; then
+    files_dir="/boot/raspi-updater"
+fi
+
 if [ ! -e "$files_dir/initramfs-script" ]; then
+    bash
     echo "Could not find partition with raspi-updater directory"
     umount_and_exit
 fi
@@ -53,7 +58,7 @@ touch "$lock_file"
 mkdir -p /tmp
 cp -ra "$files_dir" /tmp
 cd /tmp/raspi-updater
-umount "$mount_dir"
+umount "$mount_dir" || true
 
 chmod +x ./initramfs-script 
 ./initramfs-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.

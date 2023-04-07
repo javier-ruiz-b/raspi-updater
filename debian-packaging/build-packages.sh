@@ -43,9 +43,13 @@ for arch in "${archs[@]}"; do
         ;; 
     *)      echo "Architecture $arch unknown"; exit 1 ;;
     esac
-
-    go build -ldflags "-s -w -linkmode external -extldflags '-static'" -o "$output_bin" ../cmd/updater/*.go 
-
+    
+    if [ "${DEBUG:-}" = "true" ]; then
+        go build -race -o "$output_bin" ../cmd/updater/*.go 
+    else
+        go build -ldflags "-s -w -extldflags '-static'" -o "$output_bin" ../cmd/updater/*.go 
+    fi
+    
     cd "$tmpdir"
     chmod +x "$package_dir/usr/share/initramfs-tools/hooks"/* \
              "$package_dir/usr/share/initramfs-tools/scripts"/*/* \

@@ -22,7 +22,7 @@ boot_dir="/boot/raspi-updater"
 mkdir -p "$boot_dir"
 cp -p "$conf_file" "$boot_dir/"
 cp -p /usr/share/raspi-updater/initramfs-script "$boot_dir/"
-cp -p /usr/share/raspi-updater/raspi-updater  "$boot_dir/client-raspi-updater"
+cp -p /usr/share/raspi-updater/raspi-updater  "$boot_dir/"
 cp -p "$CERT_FILE" "$boot_dir/"
 
 copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin
@@ -32,6 +32,7 @@ mkdir -p "$DESTDIR/etc/udhcpc"
 cp -p "/etc/udhcpc/default.script" "$DESTDIR/etc/udhcpc"
 
 # For DNS resolving
+cp -p /etc/hosts "$DESTDIR/etc"
 cp -p /etc/resolv.conf "$DESTDIR/etc"
 cp -p /etc/nsswitch.conf "$DESTDIR/etc"
 

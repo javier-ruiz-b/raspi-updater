@@ -36,6 +36,9 @@ func (c *ClientStruct) Close() {
 
 func (c *ClientStruct) Get(url string) (*http.Response, error) {
 	response, err := c.tc.Get(url)
+	if err != nil {
+		return response, err
+	}
 	if response.StatusCode != http.StatusOK {
 		return response, fmt.Errorf("error getting  %s, unexpected status code: %d", url, response.StatusCode)
 	}

@@ -13,6 +13,7 @@ type Config struct {
 	Verbose         *bool
 	Log             *bool
 	Version         *string
+	IsClient        *bool
 }
 
 func NewConfig() *Config {
@@ -22,6 +23,7 @@ func NewConfig() *Config {
 	defaultVerbose := false
 	defaultLog := false
 	defaultVersion := version.VERSION
+	defaultIsClient := false
 
 	return &Config{
 		Address:         &defaultAddress,
@@ -30,6 +32,7 @@ func NewConfig() *Config {
 		Verbose:         &defaultVerbose,
 		Log:             &defaultLog,
 		Version:         &defaultVersion,
+		IsClient:        &defaultIsClient,
 	}
 }
 
@@ -39,4 +42,5 @@ func (c *Config) LoadFlags() {
 	c.KeyPath = flag.String("keyFile", *c.KeyPath, "QUIC key file path")
 	c.Verbose = flag.Bool("verbose", *c.Verbose, "Increase verbosity")
 	c.Log = flag.Bool("log", *c.Log, "Log quic communication in qlog files")
+	c.IsClient = flag.Bool("client", *c.IsClient, "Run as client")
 }

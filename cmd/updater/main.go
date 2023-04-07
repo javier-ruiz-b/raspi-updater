@@ -35,7 +35,7 @@ func main() {
 
 func containsClient(args []string) bool {
 	for _, value := range args {
-		if (value) == "client" {
+		if value == "-client" || value == "--client" {
 			return true
 		}
 	}
