@@ -119,7 +119,7 @@ func (u *Updater) update() error {
 	}
 
 	log.Print("Downloading boot partition")
-	downloadedBootPartitionPath, err := u.downloadBootPartition(u.partitionDownloadUrl(remoteBootPartition))
+	downloadedBootPartitionPath, err := u.downloadBootPartitionToTemp(u.partitionDownloadUrl(remoteBootPartition))
 	if err != nil {
 		return err
 	}
@@ -155,25 +155,7 @@ func (u *Updater) update() error {
 		return err
 	}
 
-	log.Print("Writing boot partition")
-	localBootPartition, err := u.disk.GetPartitionTable().GetBootPartition()
-	if err != nil {
-		return err
-	}
-	compressedBootPartition, err := os.Open(downloadedBootPartitionPath)
-	if err != nil {
-		return err
-	}
-	if err = u.writePartition(localBootPartition, compressedBootPartition, "Writing boot partition"); err != nil {
-		return err
-	}
-	if err = compressedBootPartition.Close(); err != nil {
-		return err
-	}
-	if err = os.Remove(compressedBootPartition.Name()); err != nil {
-		return err
-	}
-
+	log.Print("Writing partitions")
 	for i, partition := range remotePartitionTable.Partitions {
 		if i == remoteBootPartition.Index {
 			continue
@@ -191,17 +173,38 @@ func (u *Updater) update() error {
 		}
 	}
 
+	if u.writeBootPartition(downloadedBootPartitionPath); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (u *Updater) downloadBootPartition(url string) (string, error) {
+func (u *Updater) writeBootPartition(downloadedBootPartitionPath string) error {
+	log.Print("Writing boot partition")
+	localBootPartition, err := u.disk.GetPartitionTable().GetBootPartition()
+	if err != nil {
+		return err
+	}
+	compressedBootPartition, err := os.Open(downloadedBootPartitionPath)
+	if err != nil {
+		return err
+	}
+	defer compressedBootPartition.Close()
+	if err = u.writePartition(localBootPartition, compressedBootPartition, "Writing boot partition"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (u *Updater) downloadBootPartitionToTemp(url string) (string, error) {
 	compressedBootPartition, err := os.CreateTemp(os.TempDir(), "boot")
 	if err != nil {
 		return "", err
 	}
 	defer compressedBootPartition.Close()
 
-	// Test compression on the fly
+	// Test compression integrity on the fly
 	streamTestReader, streamTestWriter := io.Pipe()
 	tester := compression.NewStreamTester(streamTestReader, *u.conf.CompressionTool)
 	if err := tester.Open(); err != nil {
@@ -228,7 +231,7 @@ func (u *Updater) downloadBootPartition(url string) (string, error) {
 	}
 
 	if _, err = tester.Read(make([]byte, 1)); err != io.EOF && err != nil {
-		return "", fmt.Errorf("failed testing compressed stream: %s", err.Error())
+		return "", fmt.Errorf("failed testing integrity of compressed stream: %s", err.Error())
 	}
 
 	return compressedBootPartition.Name(), nil

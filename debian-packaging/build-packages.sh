@@ -56,7 +56,7 @@ for arch in "${archs[@]}"; do
              "$package_dir/usr/local/bin"/*
     sed -i "s/%version%/$VERSION/g" "$package_dir/DEBIAN/control"
     sed -i "s/%arch%/$arch/g" "$package_dir/DEBIAN/control"
-    dpkg-deb -Znone --build --root-owner-group "$package_name"
+    dpkg-deb -Zgzip -z3 --build --root-owner-group "$package_name"
     mv *.deb "$output_dir"
     rm -rf "${tmpdir:?}/"*
     cd -

@@ -1,0 +1,11 @@
+[Unit]
+Description=Raspberry Updater Server
+After=local-fs.target -.mount boot.mount
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/bin/rm -f /boot/raspi-updater/lock
+
+[Install]
+WantedBy=multi-user.target

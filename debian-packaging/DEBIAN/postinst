@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+# Install systemd service
+systemctl daemon-reload
+systemctl enable raspi-updater.service
+systemctl start raspi-updater.service
+
+exit 0
