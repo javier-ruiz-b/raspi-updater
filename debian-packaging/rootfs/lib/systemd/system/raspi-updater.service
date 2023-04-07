@@ -1,5 +1,5 @@
 [Unit]
-Description=Raspberry Updater Server
+Description=Raspberry Updater
 After=local-fs.target -.mount boot.mount
 
 [Service]

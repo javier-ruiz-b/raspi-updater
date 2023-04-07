@@ -7,11 +7,6 @@ prereqs)
     exit 0 ;;
 esac
 
-if grep 'raspi-updater-skip' /proc/cmdline; then
-    echo "Detected raspi-updater-skip"
-    exit 0
-fi
-
 error() {
     echo "$@"
     grep "$mount_dir" /proc/mounts && umount "$mount_dir" || true
@@ -19,34 +14,43 @@ error() {
     exit 0
 }
 
-mount_dir=/mnt/boot
-mkdir -p "$mount_dir"
+main() {
+    if grep 'raspi-updater-skip' /proc/cmdline; then
+        echo "Detected raspi-updater-skip"
+        exit 0
+    fi
 
-. "$DESTDIR/etc/raspi-updater/boot.conf" || error "boot.conf not found"
+    mount_dir=/mnt/boot
+    mkdir -p "$mount_dir"
 
-mount -t "$FSTYPE" -o rw,noatime "$BOOTDEVICE" "$mount_dir" || echo "Could not mount $BOOTDEVICE"
+    . "$DESTDIR/etc/raspi-updater/boot.conf" || error "boot.conf not found"
 
-if [ -f /.dockerenv ]; then
-    files_dir="/boot/raspi-updater"
-else
-    files_dir="$mount_dir/$BOOTUPDATERDIR"
-fi
+    mount -t "$FSTYPE" -o rw,noatime "$BOOTDEVICE" "$mount_dir" || echo "Could not mount $BOOTDEVICE"
 
-if [ ! -e "$files_dir/initramfs-script" ]; then
-    error "Could not find partition with raspi-updater directory"
-fi
+    if [ -f /.dockerenv ]; then
+        files_dir="/boot/raspi-updater"
+    else
+        files_dir="$mount_dir/$BOOTUPDATERDIR"
+    fi
 
-lock_file="$files_dir/lock"
-if [ -f "$lock_file" ]; then
-    rm "$lock_file"
-    error "Previous raspi-updater was unsuccessful. Deleting lock and continue booting."
-fi
-touch "$lock_file"
+    if [ ! -e "$files_dir/initramfs-script" ]; then
+        error "Could not find partition with raspi-updater directory"
+    fi
 
-mkdir -p /tmp
-cp -ra "$files_dir" /tmp
-cd /tmp/raspi-updater
-umount "$mount_dir" || umount -l "$mount_dir" || true
+    lock_file="$files_dir/lock"
+    if [ -f "$lock_file" ]; then
+        rm "$lock_file"
+        error "Previous raspi-updater was unsuccessful. Deleting lock and continue booting."
+    fi
+    touch "$lock_file"
 
-chmod +x ./initramfs-script 
-./initramfs-script 2>&1 | tee /run/raspi-updater.log || echo script returned error.
+    mkdir -p /tmp
+    cp -ra "$files_dir" /tmp
+    cd /tmp/raspi-updater
+    umount "$mount_dir" || umount -l "$mount_dir" || true
+
+    chmod +x ./initramfs-script 
+    ./initramfs-script
+}
+
+main 2>&1 | tee /run/raspi-updater.log || echo script returned error.

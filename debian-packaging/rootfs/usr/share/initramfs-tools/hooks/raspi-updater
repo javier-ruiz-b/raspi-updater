@@ -20,15 +20,15 @@ conf_file="/etc/raspi-updater/raspi-updater.conf"
 # copy files to /boot
 boot_dir="/boot/raspi-updater"
 mkdir -p "$boot_dir"
-cp -p "$conf_file" "$boot_dir/"
-cp -p /usr/share/raspi-updater/initramfs-script "$boot_dir/"
-cp -p /usr/share/raspi-updater/raspi-updater  "$boot_dir/"
-cp -p "$CERT_FILE" "$boot_dir/"
+cp "$conf_file" "$boot_dir/"
+cp /usr/share/raspi-updater/initramfs-script "$boot_dir/"
+cp /usr/share/raspi-updater/raspi-updater  "$boot_dir/"
+cp "$CERT_FILE" "$boot_dir/"
 
 # copy information of /boot to ramdisk
 BOOTDEVICE=$(df -P "$boot_dir" | tail -n1 | awk '{print $1}')
 BOOTMOUNT=$(df -P "$boot_dir" | tail -n1 | awk '{print $6}')
-BOOTUPDATERDIR=${boot_dir#"$BOOTMOUNT"-}
+BOOTUPDATERDIR=${boot_dir#"${BOOTMOUNT}"}
 FSTYPE=$(blkid -o value -s TYPE "$BOOTDEVICE" || true)
 
 mkdir -p "$DESTDIR/etc/raspi-updater"

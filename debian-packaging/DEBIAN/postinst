@@ -7,4 +7,6 @@ systemctl daemon-reload
 systemctl enable raspi-updater.service
 systemctl start raspi-updater.service
 
+raspi-updater-config
+
 exit 0
