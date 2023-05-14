@@ -8,7 +8,7 @@ import (
 
 func TestCompressionToolLz4IsAvailable(t *testing.T) {
 	tested := &CompressionTool{
-		Name: "../../tools_win/lz4",
+		Binary: "../../tools_win/lz4",
 	}
 
 	assert.True(t, tested.IsAvailable())

@@ -14,7 +14,7 @@ func TestGetsCompressors(t *testing.T) {
 	response := getRequest(t, API_COMPRESSORS)
 	assert.Equal(t, http.StatusOK, response.Code)
 
-	var decoders []string
-	assert.Nil(t, gob.NewDecoder(response.Body).Decode(&decoders))
-	assert.ElementsMatch(t, []string{"lz4", "xz"}, decoders)
+	var availableCompressors []string
+	assert.Nil(t, gob.NewDecoder(response.Body).Decode(&availableCompressors))
+	assert.ElementsMatch(t, []string{"lz4fast", "lz4best", "xz"}, availableCompressors)
 }

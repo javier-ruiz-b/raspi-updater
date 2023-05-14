@@ -18,9 +18,11 @@ import (
 )
 
 type Updater struct {
-	conf *config.ClientConfig
-	disk *disk.Disk
-	qc   transport.Client
+	conf           *config.ClientConfig
+	disk           *disk.Disk
+	qc             transport.Client
+	fastCompressor *compression.CompressionTool
+	bestCompressor *compression.CompressionTool
 }
 
 func NewUpdater(conf *config.ClientConfig) *Updater {
@@ -59,6 +61,10 @@ func (u *Updater) Run() error {
 	localVersion, err := u.disk.ReadVersion()
 	if err != nil {
 		log.Printf("Warning: could not read local version: %v", err)
+	}
+
+	if err := u.matchCompressionTool(); err != nil {
+		return err
 	}
 
 	err = u.backupDisk(u.backupLengthLocal(u.disk.GetPartitionTable()))
@@ -101,6 +107,23 @@ func (u *Updater) Run() error {
 	if err := u.conf.Runner.RunPath("/usr/bin/busybox", "reboot", "-f"); err != nil {
 		log.Printf("Couldn't reboot")
 	}
+
+	return nil
+}
+
+func (u *Updater) matchCompressionTool() error {
+	log.Print("Matching compression tools")
+	var availableServerCompressors []string
+	if err := u.qc.GetObject(server.API_COMPRESSORS, &availableServerCompressors); err != nil {
+		return err
+	}
+	var err error
+	u.fastCompressor, u.bestCompressor, err = compression.MatchAndGetFastestAndBestRatioCompresors(availableServerCompressors)
+	if err != nil {
+		return err
+	}
+
+	log.Print("Using ", u.fastCompressor.Name, " compression")
 
 	return nil
 }
@@ -206,7 +229,7 @@ func (u *Updater) downloadBootPartitionToTemp(url string) (string, error) {
 
 	// Test compression integrity on the fly
 	streamTestReader, streamTestWriter := io.Pipe()
-	tester := compression.NewStreamTester(streamTestReader, *u.conf.CompressionTool)
+	tester := compression.NewStreamTester(streamTestReader, u.fastCompressor.Binary)
 	if err := tester.Open(); err != nil {
 		return "", err
 	}
@@ -259,7 +282,7 @@ func (u *Updater) backupDisk(backupDiskLength int64) error {
 	diskBarReader := progressbar.DefaultBytes(backupDiskLength, "Backup "+*u.conf.DiskDevice)
 	defer diskBarReader.Close()
 
-	diskCompressionStream := compression.NewStreamCompressorN(io.TeeReader(disk, diskBarReader), backupDiskLength, *u.conf.CompressionTool)
+	diskCompressionStream := compression.NewStreamCompressorN(io.TeeReader(disk, diskBarReader), backupDiskLength, u.fastCompressor.Binary)
 	if err := diskCompressionStream.Open(); err != nil {
 		return err
 	}
@@ -267,7 +290,7 @@ func (u *Updater) backupDisk(backupDiskLength int64) error {
 
 	backupUrl := strings.Replace(server.API_IMAGES_BACKUP, "{id}", *u.conf.Id, 1)
 	backupUrl = strings.Replace(backupUrl, "{version}", localVersion, 1)
-	backupUrl = strings.Replace(backupUrl, "{compression}", *u.conf.CompressionTool, 1)
+	backupUrl = strings.Replace(backupUrl, "{compression}", u.fastCompressor.Binary, 1)
 
 	return u.qc.UploadStream(backupUrl, diskCompressionStream)
 }
@@ -309,7 +332,7 @@ func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.R
 		return err
 	}
 
-	remoteBootPartitionStream := compression.NewStreamDecompressor(compressedInput, *u.conf.CompressionTool)
+	remoteBootPartitionStream := compression.NewStreamDecompressor(compressedInput, u.fastCompressor.Binary)
 	if err := remoteBootPartitionStream.Open(); err != nil {
 		return err
 	}
@@ -338,6 +361,6 @@ func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.R
 func (u *Updater) partitionDownloadUrl(partition *disk.Partition) string {
 	downloadUrlBoot := strings.Replace(server.API_IMAGES_DOWNLOAD, "{id}", *u.conf.Id, 1)
 	downloadUrlBoot = strings.Replace(downloadUrlBoot, "{partitionIndex}", strconv.Itoa(partition.Index), 1)
-	downloadUrlBoot = strings.Replace(downloadUrlBoot, "{compression}", *u.conf.CompressionTool, 1)
+	downloadUrlBoot = strings.Replace(downloadUrlBoot, "{compression}", u.fastCompressor.Binary, 1)
 	return downloadUrlBoot
 }

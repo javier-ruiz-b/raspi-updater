@@ -107,7 +107,7 @@ func TestAcceptance(t *testing.T) {
 
 	compressedBackup, err := os.Open(matches[0])
 	assert.Nil(t, err)
-	decompressedBackup := compression.NewStreamDecompressor(compressedBackup, *clientConfig.CompressionTool)
+	decompressedBackup := compression.NewStreamDecompressor(compressedBackup, "lz4")
 	err = decompressedBackup.Open()
 	assert.Nil(t, err)
 
@@ -197,11 +197,9 @@ func TestMain(m *testing.M) {
 func newClientConfig() *config.ClientConfig {
 	result := config.NewClientConfig()
 
-	compressionTool := "lz4"
 	result.Id = &id
 	result.DiskDevice = &clientImage
 	result.Runner = runner.NewFakeRunner()
-	result.CompressionTool = &compressionTool
 
 	cert, key := testdata.GetCertificatePaths()
 	result.CertificatePath = &cert

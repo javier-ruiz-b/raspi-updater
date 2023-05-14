@@ -56,7 +56,6 @@ busybox sysctl -w net.core.rmem_max=2500000 || true
     -client \
     -id "$ID" \
     -disk "$DEVICE" \
-    -compression "$COMPRESSION_TOOL" \
     -address "$SERVER" \
     -certFile "$CERT_FILE" || error "Updater failed"
 

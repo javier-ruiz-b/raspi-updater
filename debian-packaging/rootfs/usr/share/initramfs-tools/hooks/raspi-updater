@@ -39,7 +39,19 @@ BOOTUPDATERDIR=$BOOTUPDATERDIR
 FSTYPE=$FSTYPE
 EOF
 
-copy_exec "/usr/bin/$COMPRESSION_TOOL"   /usr/bin
+# ordered by prefered order
+for tool in lz4 zstd gzip xz; do
+    if [ ! -f "/usr/bin/$tool" ]; then
+        continue
+    fi
+    copy_exec "/usr/bin/$tool"   /usr/bin
+    tool_copied=true
+done
+
+if [ "${tool_copied:-}" != "true" ]; then
+    echo "No valid compressor tool found"
+    exit 1
+fi
 
 # for setting IP from DHCP client (requires udhcpc)
 mkdir -p "$DESTDIR/etc/udhcpc"

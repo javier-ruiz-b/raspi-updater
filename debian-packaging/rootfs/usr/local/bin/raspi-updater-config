@@ -53,10 +53,6 @@ while [ ! -f "${CERT_FILE:-}" ]; do
     read -r -p "certificate file: " CERT_FILE
 done
 
-while [ ! -f "/bin/${COMPRESSION_TOOL:-}" ]; do
-    read -r -p "compression tool: " COMPRESSION_TOOL
-done
-
 CONFIG_DIR=/etc/raspi-updater
 CONFIG_FILE=$CONFIG_DIR/raspi-updater.conf
 
@@ -70,7 +66,6 @@ NET_DRIVER=$NET_DRIVER
 SERVER=$SERVER
 CERT_FILE=$CERT_FILE
 DEVICE=$DEVICE
-COMPRESSION_TOOL=$COMPRESSION_TOOL
 EOF
 
 echo ""
