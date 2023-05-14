@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"runtime"
 )
 
 type CompressionStream struct {
@@ -31,7 +32,11 @@ func (c *CompressionStream) Close() error {
 }
 
 func (c *CompressionStream) Open() error {
-	c.runningCmd = exec.Command(c.command, c.commandArgs...)
+	command := c.command
+	if runtime.GOOS == "windows" {
+		command += ".exe"
+	}
+	c.runningCmd = exec.Command(command, c.commandArgs...)
 
 	if c.sizeIn == -1 {
 		c.runningCmd.Stdin = c.inStream

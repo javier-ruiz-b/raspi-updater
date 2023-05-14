@@ -5,19 +5,13 @@ import (
 	"crypto/rand"
 	"io"
 	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func setup() {
-	if runtime.GOOS == "windows" {
-		path := os.Getenv("PATH")
-		tools_win_dir, _ := filepath.Abs("../../tools_win")
-		os.Setenv("PATH", path+";"+tools_win_dir)
-	}
+	SetupWindowsTests()
 }
 
 func TestStreamsLimited1MbOfRandomData(t *testing.T) {

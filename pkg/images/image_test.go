@@ -2,21 +2,16 @@ package images
 
 import (
 	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/diskfs/go-diskfs"
 	"github.com/diskfs/go-diskfs/partition/mbr"
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
 	"github.com/stretchr/testify/assert"
 )
 
 func setup() {
-	if runtime.GOOS == "windows" {
-		path := os.Getenv("PATH")
-		tools_win_dir, _ := filepath.Abs("../../tools_win")
-		os.Setenv("PATH", path+";"+tools_win_dir)
-	}
+	compression.SetupWindowsTests()
 }
 
 func TestOpensRawImage(t *testing.T) {

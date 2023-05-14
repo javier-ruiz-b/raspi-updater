@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
@@ -29,24 +30,23 @@ func (i *Image) OpenImage() (io.ReadSeekCloser, error) {
 		return inStream, err
 	}
 
-	compressionTool := ""
 	name := strings.ToLower(fileInfo.Name())
-	switch {
-	case strings.HasSuffix(name, ".img"):
+	if strings.HasSuffix(name, ".img") {
 		return inStream, nil
-	case strings.HasSuffix(name, ".img.lz4"):
-		compressionTool = "lz4"
-	case strings.HasSuffix(name, ".img.xz"):
-		compressionTool = "xz"
-	case strings.HasSuffix(name, ".img.zstd"):
-		compressionTool = "zstd"
-	case strings.HasSuffix(name, ".img.gz"):
-		compressionTool = "gzip"
-	default:
+	}
+
+	extensionRe := regexp.MustCompile(`.*\.img\.(.*)`)
+	extensionMatch := extensionRe.FindStringSubmatch(name)
+	if len(extensionMatch) != 2 {
 		return nil, errors.New("Unknown file extension: " + fileInfo.Name())
 	}
 
-	stream := compression.NewStreamDecompressor(inStream, compressionTool)
+	tool, found := compression.AvailableToolByFileExtension()[extensionMatch[1]]
+	if !found {
+		return nil, errors.New("No compression tool found for file extension " + extensionMatch[1])
+	}
+
+	stream := compression.NewStreamDecompressor(inStream, tool.Name)
 	return stream, stream.Open()
 }
 

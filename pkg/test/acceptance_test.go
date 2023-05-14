@@ -28,17 +28,10 @@ var clientImage string
 var serverImage string
 var serv *server.Server
 
-// var clientConfig *config.ClientConfig
-
-// var imagesDir string = "../testdata"
 var id string = "acceptance"
 
 func setup() {
-	if runtime.GOOS == "windows" {
-		path := os.Getenv("PATH")
-		tools_win_dir, _ := filepath.Abs("../../tools_win")
-		os.Setenv("PATH", path+";"+tools_win_dir)
-	}
+	compression.SetupWindowsTests()
 
 	var err error
 	tempDir, err = os.MkdirTemp(os.TempDir(), "acceptance")

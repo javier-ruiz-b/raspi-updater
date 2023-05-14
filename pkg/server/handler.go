@@ -16,6 +16,7 @@ const API_IMAGES_PARTITION_TABLE string = "/images/{id}/partitionTable"
 const API_IMAGES_DOWNLOAD string = "/images/{id}/download/{partitionIndex}-{compression}"
 const API_UPDATE string = "/update/{filename}"
 const API_VERSION string = "/version"
+const API_COMPRESSORS string = "/compressors"
 
 type HandlerConfig struct {
 	binariesDir string
@@ -39,6 +40,7 @@ func newMainHandler(options *config.ServerConfig) http.Handler {
 	serveMux.Handle(API_IMAGES_DOWNLOAD, newPathHandler(hc.imageDownload))
 	serveMux.Handle(API_IMAGES_BACKUP, newPathHandler(hc.imageBackup))
 	serveMux.Handle(API_IMAGES_BACKUP_EXISTS, newPathHandler(hc.imageBackupExists))
+	serveMux.Handle(API_COMPRESSORS, newPathHandler(hc.compressorsHandler))
 
 	return serveMux
 }
