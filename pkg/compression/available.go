@@ -98,13 +98,13 @@ func (c *CompressionTool) IsAvailable() bool {
 		return false
 	}
 
-	compressor := NewStreamCompressor(bytes.NewReader(randBytes), c.Binary)
+	compressor := NewStreamCompressor(bytes.NewReader(randBytes), c)
 	if compressor.Open() != nil {
 		return false
 	}
 	defer compressor.Close()
 
-	decompressor := NewStreamDecompressor(compressor, c.Binary)
+	decompressor := NewStreamDecompressor(compressor, c)
 	if decompressor.Open() != nil {
 		return false
 	}

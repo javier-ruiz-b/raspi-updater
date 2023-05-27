@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/javier-ruiz-b/raspi-image-updater/pkg/compression"
 )
 
 type ImageDir struct {
@@ -49,8 +51,8 @@ func (i *ImageDir) FindImage(imageName string) (*Image, error) {
 	}, nil
 }
 
-func (i *ImageDir) CreateBackup(imageName string, version string, compression string) (*os.File, error) {
-	fileName := imageName + "_" + version + "_" + time.Now().Format("2006-01-02_15-04-05") + ".img." + compression
+func (i *ImageDir) CreateBackup(imageName string, version string, tool *compression.CompressionTool) (*os.File, error) {
+	fileName := imageName + "_" + version + "_" + time.Now().Format("2006-01-02_15-04-05") + ".img." + tool.FileExtension
 	return os.Create(i.backupDir + "/" + fileName)
 }
 

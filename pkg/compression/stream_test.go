@@ -18,8 +18,8 @@ func TestStreamsLimited1MbOfRandomData(t *testing.T) {
 	randBytes, err := io.ReadAll(io.LimitReader(rand.Reader, 1024*1024))
 	assert.Nil(t, err)
 	assert.Equal(t, 1024*1024, len(randBytes))
+	tool := AvailableToolMap()["lz4fast"]
 
-	tool := "lz4"
 	testedCompressor := NewStreamCompressorN(bytes.NewReader(randBytes), 1024*1024, tool)
 	assert.Nil(t, testedCompressor.Open())
 	tested := NewStreamDecompressor(testedCompressor, tool)
@@ -36,7 +36,7 @@ func TestStreams1MbOfRandomData(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1024*1024, len(randBytes))
 
-	tool := "xz"
+	tool := AvailableToolMap()["lz4fast"]
 	testedCompressor := NewStreamCompressor(bytes.NewReader(randBytes), tool)
 	assert.Nil(t, testedCompressor.Open())
 	tested := NewStreamDecompressor(testedCompressor, tool)

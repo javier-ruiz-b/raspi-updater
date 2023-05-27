@@ -46,7 +46,7 @@ func (i *Image) OpenImage() (io.ReadSeekCloser, error) {
 		return nil, errors.New("No compression tool found for file extension " + extensionMatch[1])
 	}
 
-	stream := compression.NewStreamDecompressor(inStream, tool.Binary)
+	stream := compression.NewStreamDecompressor(inStream, tool)
 	return stream, stream.Open()
 }
 

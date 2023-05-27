@@ -107,7 +107,8 @@ func TestAcceptance(t *testing.T) {
 
 	compressedBackup, err := os.Open(matches[0])
 	assert.Nil(t, err)
-	decompressedBackup := compression.NewStreamDecompressor(compressedBackup, "lz4")
+
+	decompressedBackup := compression.NewStreamDecompressor(compressedBackup, compression.AvailableToolMap()["lz4fast"])
 	err = decompressedBackup.Open()
 	assert.Nil(t, err)
 

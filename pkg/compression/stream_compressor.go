@@ -4,15 +4,14 @@ import (
 	"io"
 )
 
-func NewStreamCompressor(inStream io.Reader, compressor string) *CompressionStream {
-	return NewStreamCompressorN(inStream, -1, compressor)
+func NewStreamCompressor(inStream io.Reader, tool *CompressionTool) *CompressionStream {
+	return NewStreamCompressorN(inStream, -1, tool)
 }
 
-func NewStreamCompressorN(inStream io.Reader, sizeIn int64, compressor string) *CompressionStream {
+func NewStreamCompressorN(inStream io.Reader, sizeIn int64, tool *CompressionTool) *CompressionStream {
 	return &CompressionStream{
-		inStream:    inStream,
-		sizeIn:      sizeIn,
-		command:     compressor,
-		commandArgs: []string{"-c", "-"},
+		inStream: inStream,
+		sizeIn:   sizeIn,
+		tool:     tool,
 	}
 }

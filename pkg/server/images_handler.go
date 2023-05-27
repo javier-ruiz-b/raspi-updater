@@ -50,10 +50,14 @@ func (hc *HandlerConfig) imagePartitionTableHandler(w http.ResponseWriter, r *ht
 
 func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (int, []byte) {
 	imageName := mux.Vars(r)["id"]
-	compressionBinary := mux.Vars(r)["compression"]
+	compressionExtension := mux.Vars(r)["compression"]
 	partitionIndex, err := strconv.Atoi(mux.Vars(r)["partitionIndex"])
 	if err != nil {
 		return http.StatusBadRequest, []byte(err.Error())
+	}
+	tool, found := compression.AvailableToolByFileExtension()[compressionExtension]
+	if !found {
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("compressor tool for " + compressionExtension + " is not available"))
 	}
 
 	partitionTable, err := getPartitionTable(*hc.imageDir, imageName)
@@ -88,7 +92,7 @@ func (hc *HandlerConfig) imageDownload(w http.ResponseWriter, r *http.Request) (
 	bar := progressbar.DefaultBytes(size, "Sending "+imageName+" partition "+strconv.Itoa(partitionIndex))
 	defer bar.Close()
 
-	compressor := compression.NewStreamCompressorN(io.TeeReader(stream, bar), size, compressionBinary)
+	compressor := compression.NewStreamCompressorN(io.TeeReader(stream, bar), size, tool)
 	if err = compressor.Open(); err != nil {
 		return http.StatusInternalServerError, []byte(err.Error())
 	}
@@ -123,13 +127,17 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 	}
 
 	imageName := mux.Vars(r)["id"]
-	compressionBinary := mux.Vars(r)["compression"]
-	if imageName == "" || compressionBinary == "" {
+	compressionExtension := mux.Vars(r)["compression"]
+	if imageName == "" || compressionExtension == "" {
 		return http.StatusBadRequest, []byte("Missing parameters")
+	}
+	tool, found := compression.AvailableToolByFileExtension()[compressionExtension]
+	if !found {
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("compressor tool for " + compressionExtension + " is not available"))
 	}
 	version := mux.Vars(r)["version"]
 
-	outFile, err := hc.imageDir.CreateBackup(imageName, version, compressionBinary)
+	outFile, err := hc.imageDir.CreateBackup(imageName, version, tool)
 	if err != nil {
 		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to create backup: %v", err))
 	}
@@ -137,9 +145,9 @@ func (hc *HandlerConfig) imageBackup(w http.ResponseWriter, r *http.Request) (in
 
 	// Test compression on the fly
 	streamTestReader, streamTestWriter := io.Pipe()
-	tester := compression.NewStreamTester(streamTestReader, compressionBinary)
+	tester := compression.NewStreamTester(streamTestReader, tool)
 	if err := tester.Open(); err != nil {
-		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to open stream tester with %s: %s", compressionBinary, err.Error()))
+		return http.StatusInternalServerError, []byte(fmt.Sprintf("Failed to open stream tester with %s: %s", tool, err.Error()))
 	}
 	defer tester.Close()
 

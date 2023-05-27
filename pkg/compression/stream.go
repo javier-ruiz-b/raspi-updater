@@ -12,8 +12,8 @@ type CompressionStream struct {
 	inStream     io.Reader
 	sizeIn       int64
 	stdoutStream io.ReadCloser
-	command      string
-	commandArgs  []string
+	tool         *CompressionTool
+	extraArgs    []string
 	runningCmd   *exec.Cmd
 	stderrBuffer bytes.Buffer
 	finished     bool
@@ -32,11 +32,11 @@ func (c *CompressionStream) Close() error {
 }
 
 func (c *CompressionStream) Open() error {
-	command := c.command
+	command := c.tool.Binary
 	if runtime.GOOS == "windows" {
 		command += ".exe"
 	}
-	c.runningCmd = exec.Command(command, c.commandArgs...)
+	c.runningCmd = exec.Command(command, append(c.extraArgs, c.tool.CompressionArgs...)...)
 
 	if c.sizeIn == -1 {
 		c.runningCmd.Stdin = c.inStream

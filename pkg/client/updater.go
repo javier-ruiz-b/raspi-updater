@@ -229,7 +229,7 @@ func (u *Updater) downloadBootPartitionToTemp(url string) (string, error) {
 
 	// Test compression integrity on the fly
 	streamTestReader, streamTestWriter := io.Pipe()
-	tester := compression.NewStreamTester(streamTestReader, u.fastCompressor.Binary)
+	tester := compression.NewStreamTester(streamTestReader, u.fastCompressor)
 	if err := tester.Open(); err != nil {
 		return "", err
 	}
@@ -282,7 +282,7 @@ func (u *Updater) backupDisk(backupDiskLength int64) error {
 	diskBarReader := progressbar.DefaultBytes(backupDiskLength, "Backup "+*u.conf.DiskDevice)
 	defer diskBarReader.Close()
 
-	diskCompressionStream := compression.NewStreamCompressorN(io.TeeReader(disk, diskBarReader), backupDiskLength, u.fastCompressor.Binary)
+	diskCompressionStream := compression.NewStreamCompressorN(io.TeeReader(disk, diskBarReader), backupDiskLength, u.fastCompressor)
 	if err := diskCompressionStream.Open(); err != nil {
 		return err
 	}
@@ -332,7 +332,7 @@ func (u *Updater) writePartition(partition *disk.Partition, compressedInput io.R
 		return err
 	}
 
-	remoteBootPartitionStream := compression.NewStreamDecompressor(compressedInput, u.fastCompressor.Binary)
+	remoteBootPartitionStream := compression.NewStreamDecompressor(compressedInput, u.fastCompressor)
 	if err := remoteBootPartitionStream.Open(); err != nil {
 		return err
 	}

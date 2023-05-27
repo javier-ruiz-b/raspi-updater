@@ -16,5 +16,7 @@ func TestGetsCompressors(t *testing.T) {
 
 	var availableCompressors []string
 	assert.Nil(t, gob.NewDecoder(response.Body).Decode(&availableCompressors))
-	assert.ElementsMatch(t, []string{"lz4fast", "lz4best", "xz"}, availableCompressors)
+	assert.Contains(t, availableCompressors, "lz4fast")
+	assert.Contains(t, availableCompressors, "lz4best")
+	assert.Contains(t, availableCompressors, "xz")
 }

@@ -21,7 +21,6 @@ NET_DRIVER=e1000
 SERVER=localhost:12345
 CERT_FILE=$src_dir/pkg/testdata/cert.pem
 DEVICE=$DEVICE
-COMPRESSION_TOOL=lz4
 EOF
 
 . /etc/raspi-updater/raspi-updater.conf 
