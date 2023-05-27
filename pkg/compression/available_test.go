@@ -1,14 +1,21 @@
 package compression
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCompressionToolLz4IsAvailable(t *testing.T) {
+	var binary string
+	if runtime.GOOS == "windows" {
+		binary = "../../tools_win/lz4"
+	} else {
+		binary = "lz4"
+	}
 	tested := &CompressionTool{
-		Binary: "../../tools_win/lz4",
+		Binary: binary,
 	}
 
 	assert.True(t, tested.IsAvailable())
