@@ -7,8 +7,6 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gorilla/mux v1.8.0
 	github.com/hlubek/readercomp v0.0.0-20210927065201-8f5e69adbe1c
-	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.27.4
 	github.com/quic-go/quic-go v0.33.0
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/stretchr/testify v1.7.0
@@ -18,15 +16,12 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
 	github.com/frankban/quicktest v1.14.3 // indirect
-	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/golang/mock v1.6.0 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/pprof v0.0.0-20230323073829-e72429f035bd // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
-	github.com/nxadm/tail v1.4.8 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.2 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/xattr v0.4.9 // indirect
@@ -46,6 +41,5 @@ require (
 	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/tools v0.7.0 // indirect
 	gopkg.in/djherbis/times.v1 v1.3.0 // indirect
-	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

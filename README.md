@@ -1,7 +1,9 @@
 # Raspi updater
 
-A Raspberry Pi updater which uses WireGuard for secure transfers over the network.
+![build-and-test](https://github.com/javier-ruiz-b/raspi-updater/actions/workflows/build-and-test.yml/badge.svg)
 
-The updater is intended to be run from the initramfs. In this way it can ensure a safe update strategy. 
+A Raspberry Pi updater which uses quic-go for secure transfers over the network.
+
+The updater is intended to be run from the initramfs. 
 
 This is a WIP. Use at your own risk.
