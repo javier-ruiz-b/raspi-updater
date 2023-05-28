@@ -8,12 +8,9 @@ chown -R "$(id -u):$(id -g)" "$HOME"
 mkdir -p "$HOME/go/pkg"
 ln -sd /cache "$HOME/go/pkg/mod"
 
-cd "$src_dir"
-sudo dpkg -i debian-packaging/output/raspi-updater*.deb
+sudo mkdir /etc/raspi-updater
 
 export DEVICE=/tmp/updater.img
-
-sudo mkdir /etc/raspi-updater
 cat <<EOF | sudo tee /etc/raspi-updater/raspi-updater.conf 
 ID=raspberry
 NET_INTERFACE=ens33
@@ -24,6 +21,9 @@ DEVICE=$DEVICE
 EOF
 
 . /etc/raspi-updater/raspi-updater.conf 
+
+cd "$src_dir"
+sudo dpkg -i debian-packaging/output/raspi-updater*.deb
 
 raspi-updater-config  # update configuration
 
@@ -49,8 +49,8 @@ sleep 1
 tmp_dir="$(mktemp -d)"
 cd "$tmp_dir"
 
-
-EXPECTED_IMAGE="$src_dir/test/images/raspberry_1.0.img.lz4"
+EXPECTED_VERSION="1.0"
+EXPECTED_IMAGE="$src_dir/test/images/raspberry_$EXPECTED_VERSION.img.lz4"
 ACTUAL_IMAGE="$(pwd)/$DEVICE"
 
 # copy MBR only
@@ -68,11 +68,43 @@ cp /dev/null dev
 sudo mv /boot/raspi-updater ./boot
 sudo chroot "$(pwd)" sh -x scripts/init-premount/raspi-updater 
 
-if lz4cat "$EXPECTED_IMAGE" | diff "$ACTUAL_IMAGE" -; then
-    echo "Test succesful"
-else
-    echo "Error: images are NOT identical"
-    sleep 3
-    lz4cat "$EXPECTED_IMAGE" | cmp -l "$ACTUAL_IMAGE" -
-    bash
+lz4 -c "$EXPECTED_IMAGE" > /tmp/expected.img
+
+mkdir "$tmp_dir"/expected
+cd  "$tmp_dir"/expected
+7z x /tmp/expected.img
+
+mkdir "$tmp_dir"/actual
+cd  "$tmp_dir"/actual
+7z x "$ACTUAL_IMAGE"
+
+if ! diff "$tmp_dir"/actual/1.img "$tmp_dir"/expected/1.img; then
+    echo "EXT4 partition differs:"
+    echo "Expected:"
+    7z l "$tmp_dir"/expected/1.img
+    echo "Actual:"
+    7z l "$tmp_dir"/actual/1.img
+    exit 1
 fi
+
+cd "$tmp_dir"/actual
+7z x 0.fat
+cd "$tmp_dir"/expected
+7z x 0.fat
+cd ..
+rm */0.fat */1.img
+
+if [ "$EXPECTED_VERSION" != "$(cat actual/version)" ]; then
+    echo "Version differs:"
+    echo "  expected: $EXPECTED_VERSION"
+    echo "  actual: $(cat actual/version)"
+    exit 1
+fi
+rm actual/version
+
+if ! diff -f actual/ expected/; then
+    echo "FAT partition differs."
+    exit 1
+fi
+
+echo "Acceptance test succeeded! Images contain same data"

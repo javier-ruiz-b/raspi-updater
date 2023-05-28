@@ -14,6 +14,7 @@ RUN apt-get update && \
         initramfs-tools \
         linux-image-amd64 \
         lz4 \
+        p7zip-full \
         sed \
         sudo \
         udhcpc \

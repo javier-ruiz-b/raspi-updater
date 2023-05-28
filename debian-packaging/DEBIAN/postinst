@@ -3,9 +3,11 @@
 set -e
 
 # Install systemd service
-systemctl daemon-reload
-systemctl enable raspi-updater.service
-systemctl start raspi-updater.service
+if [ ! -f /.dockerenv ]; then
+    /usr/bin/systemctl daemon-reload
+    /usr/bin/systemctl enable raspi-updater.service
+    /usr/bin/systemctl start raspi-updater.service
+fi
 
 raspi-updater-config
 
