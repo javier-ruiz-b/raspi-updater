@@ -9,6 +9,4 @@ if [ ! -f /.dockerenv ]; then
     /usr/bin/systemctl start raspi-updater.service
 fi
 
-raspi-updater-config
-
 exit 0
